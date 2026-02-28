@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { Alert, ScrollView, StyleSheet, TextInput as TextInputRN, View } from "react-native";
 import { ActivityIndicator, Button, IconButton, List, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Colors } from '../../constants/Colors';
 import { getProductByBarcode, restockProduct } from "../firebase/firebaseConfig";
+import { sharedStyles } from '../styles/sharedStyles';
 
 export default function RestockScreen() {
   const isFocused = useIsFocused();
@@ -29,8 +31,12 @@ export default function RestockScreen() {
 
   if (!permission?.granted) {
     return (
-      <View style={styles.centerContainer}>
-        <Text>Izin kamera diperlukan untuk restock</Text>
+      <View style={{
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center'
+      }}>
+        <Text style={{ color: Colors.light.text }}>Izin kamera diperlukan untuk restock</Text>
         <Button mode="contained" onPress={requestPermission}>Beri Izin</Button>
       </View>
     )
@@ -90,15 +96,15 @@ export default function RestockScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={sharedStyles.container}>
       <Text 
         variant="headlineSmall"
-        style={styles.title}
+        style={sharedStyles.title}
       >
-        Mode Restock (Barang Masuk)
+        Restock (Barang Masuk)
       </Text>
 
-      <View style={styles.cameraWrapper}>
+      <View style={sharedStyles.cameraWrapper}>
         {cameraActive ? (
         <CameraView 
           onBarcodeScanned={scanned ? undefined : handleScan} 
@@ -107,7 +113,7 @@ export default function RestockScreen() {
         ) : (
           <View style={[StyleSheet.absoluteFillObject, {backgroundColor: '#000' }]}/>
         )}
-        {loading && <ActivityIndicator animating={true} color="#fff" style={styles.loader}/>}
+        {loading && <ActivityIndicator animating={true} color={Colors.light.surface} style={styles.loader}/>}
       </View>
 
       <View style={styles.listArea}>
@@ -117,17 +123,20 @@ export default function RestockScreen() {
             <List.Item
               key={item.barcode}
               title={item.name}
-              titleStyle={{ color: '#333', fontWeight: 'bold'}}
+              titleStyle={{ 
+                color: Colors.light.text, 
+                fontWeight: 'bold'
+              }}
               description={`Jumlah Tambahan: ${item.qty} pcs`}
-              descriptionStyle={{ color: '#555'}}
+              descriptionStyle={{ color: Colors.light.subtext}}
               right={() => (
-                <View style={styles.rightControlWrapper}>
+                <View style={sharedStyles.rightControlWrapper}>
                   <Button 
                     compact
                     mode="outlined" 
                     onPress={() => updateLocalQty(item.barcode, -1)} 
-                    style={styles.qtyButton}
-                    textColor="#333"
+                    style={sharedStyles.qtyButton}
+                    textColor={Colors.light.text}
                   >
                     -
                   </Button>
@@ -139,15 +148,15 @@ export default function RestockScreen() {
                       setRestockList(prev => prev.map(i => i.barcode === item.barcode ? {...i, qty: num} : i));
                     }}
                     keyboardType="numeric"
-                    style={styles.inputQty}
+                    style={sharedStyles.inputQty}
                   />
 
                   <Button 
                     compact
                     mode="outlined" 
                     onPress={() => updateLocalQty(item.barcode, 1)} 
-                    style={styles.qtyButton}
-                    textColor="#333"
+                    style={sharedStyles.qtyButton}
+                    textColor={Colors.light.text}
                   >
                     +
                   </Button>
@@ -171,8 +180,8 @@ export default function RestockScreen() {
         onPress={handleUpdateStock} 
         disabled={restockList.length === 0 || loading}
         style={styles.submitButton}
-        buttonColor="#6200ee"
-        textColor="#fff"
+        buttonColor={Colors.light.primary}
+        textColor={Colors.light.surface}
       >
         KONFIRMASI BARANG MASUK
       </Button>
@@ -181,68 +190,16 @@ export default function RestockScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#fdfcfe' 
-  },
-  centerContainer: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  title: { 
-    textAlign: 'center', 
-    marginVertical: 15, 
-    fontWeight: 'bold', 
-    color: '#1976d2' 
-  },
   subTitle: { 
     marginLeft: 15, 
     fontWeight: '600', 
     marginBottom: 5,
-    color: '#333'
-  },
-  cameraWrapper: { 
-    width: '90%', 
-    height: 160, 
-    alignSelf: 'center', 
-    overflow: 'hidden', 
-    borderRadius: 20, 
-    borderWidth: 3, 
-    borderColor: '#1976d2' 
-  },
-  loader: { 
-    position: 'absolute', 
-    top: '40%', 
-    left: '45%' 
+    color: Colors.light.text
   },
   listArea: { 
     flex: 1, 
     paddingHorizontal: 10, 
     marginTop: 10 
-  },
-  rightControlWrapper: { 
-    flexDirection: 'row', 
-    alignItems: 'center',
-    width: '42%'
-  },
-  qtyButton: { 
-    width: 30, 
-    height: 40, 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    padding: 0, 
-    marginHorizontal: 3 
-  },
-  inputQty: {
-    color: '#333',
-    width: 45, 
-    height: 40, 
-    borderWidth: 1, 
-    borderColor: '#ccc', 
-    textAlign: 'center', 
-    backgroundColor: '#fff', 
-    borderRadius: 4 
   },
   submitButton: { 
     margin: 20, 

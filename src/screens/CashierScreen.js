@@ -21,8 +21,10 @@ import {
   Text
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Colors } from '../../constants/Colors';
 import { useCart } from '../context/CartContext';
 import { getProductByBarcode, updateProductStock } from '../firebase/firebaseConfig';
+import { sharedStyles } from '../styles/sharedStyles';
 
 export default function CashierScreen() {
   const isFocused = useIsFocused();
@@ -51,7 +53,7 @@ export default function CashierScreen() {
   if (!permission?.granted) {
     return (
       <View style={styles.centerContainer}>
-        <Text>Izin kamera diperlukan</Text>
+        <Text style={{ color: Colors.light.text }}>Izin kamera diperlukan</Text>
         <Button mode="contained" onPress={requestPermission}>Beri Izin</Button>
       </View>
     );
@@ -118,8 +120,8 @@ export default function CashierScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text variant="headlineSmall" style={styles.title}>Sentosa Kasir</Text>
+    <SafeAreaView style={sharedStyles.container}>
+      <Text variant="headlineSmall" style={sharedStyles.title}>Sentosa Kasir</Text>
 
       <View style={{ paddingHorizontal: 20, marginBottom: 15}}>
         <SegmentedButtons 
@@ -131,16 +133,16 @@ export default function CashierScreen() {
           ]}
           theme={{
             colors: {
-              secondaryContainer: '#444',
-              onSecondaryContainer: '#fff',
-              onSurface: '#444',
-              outline: '#444',
+              secondaryContainer: Colors.light.text,
+              onSecondaryContainer: Colors.light.surface,
+              onSurface: Colors.light.text,
+              outline: Colors.light.border,
             }
           }}
         />
       </View>
       
-      <View style={styles.cameraWrapper}>
+      <View style={sharedStyles.cameraWrapper}>
         {cameraActive ? (
         <CameraView 
           onBarcodeScanned={scanned ? undefined : handleScan} 
@@ -150,7 +152,7 @@ export default function CashierScreen() {
           <View style={[StyleSheet.absoluteFillObject, {backgroundColor: '#000' }]}/>
         )}
 
-        {loading && <ActivityIndicator animating={true} color="#fff" style={styles.loader} />}
+        {loading && <ActivityIndicator animating={true} color="#fff" style={sharedStyles.loader} />}
       </View>
 
       <Portal>
@@ -163,28 +165,31 @@ export default function CashierScreen() {
           <View>
             <Text 
               variant="titleLarge" 
-              style={{ color: '#6200ee', fontWeight: 'bold' }}
+              style={{ 
+                color: Colors.light.primary , 
+                fontWeight: 'bold' 
+              }}
             >
               {tempProduct.name}
             </Text>
 
             <Divider style={{ marginVertical: 10 }}/>
 
-            <Text variant="bodyLarge" style={{ color: '#555'}}>
-              Harga Jual: <Text style={{ fontWeight: 'bold', color: '#555'}}>
+            <Text variant="bodyLarge" style={{ color: Colors.light.text }}>
+              Harga Jual: <Text style={{ fontWeight: 'bold', color: Colors.light.text }}>
                 Rp {tempProduct.price_sell?.toLocaleString('id-ID')}
               </Text>   
             </Text>
 
-            <Text variant="bodyLarge" style={{ color: '#555'}}>
-              Stok Saat Ini: <Text style={{ fontWeight: 'bold', color: '#555' }}>
+            <Text variant="bodyLarge" style={{ color: Colors.light.text }}>
+              Stok Saat Ini: <Text style={{ fontWeight: 'bold', color: Colors.light.text  }}>
                 {tempProduct.stock} pcs
               </Text>
             </Text>
 
             <Text 
               variant="bodySmall" 
-              style={{ marginTop: 10, color: '#666' }}
+              style={{ marginTop: 10, color: Colors.light.subtext  }}
             >
               Barcode: {tempProduct.barcode}
             </Text>
@@ -207,7 +212,10 @@ export default function CashierScreen() {
             <List.Item
               key={item.barcode}
               title={item.name}
-              titleStyle={{ color: '#333', fontWeight: 'bold' }}
+              titleStyle={{ 
+                color: Colors.light.text, 
+                fontWeight: 'bold' 
+              }}
               description={() => {
                 const qty = item.qty || 0;
                 const wholesaleQty = item.wholesale_qty || 0;
@@ -221,9 +229,9 @@ export default function CashierScreen() {
                   const units = qty % wholesaleQty;
 
                   return (
-                    <Text style={{ color: '#2e7d32' }}>
+                    <Text style={{ color: Colors.light.success }}>
                       {packages} Grosir + {units} Ecer {'\n'}
-                      <Text style={{ color: '#555', fontWeight:'bold' }}>
+                      <Text style={{ color: Colors.light.subtext, fontWeight:'bold' }}>
                         Total: Rp {((packages * item.price_wholesale) + (units * item.price_sell)).toLocaleString('id-ID')}
                       </Text>
                     </Text>
@@ -231,19 +239,19 @@ export default function CashierScreen() {
                 }
                 
                 return(
-                  <Text style={{ color: `#555`}}>
+                  <Text style={{ color: Colors.light.subtext}}>
                     Rp {item.price_sell?.toLocaleString('id-ID')} x {qty}
                   </Text>
                 );
               }}
               right={() => (
-                <View style={styles.rightControlWrapper}>
+                <View style={sharedStyles.rightControlWrapper}>
                   <Button 
                     compact 
                     mode="outlined" 
                     onPress={() => updateQty(item.barcode, -1)} 
-                    style={styles.qtyButton}
-                    textColor="#333"
+                    style={sharedStyles.qtyButton}
+                    textColor={Colors.light.text}
                   >
                     -
                   </Button>
@@ -252,22 +260,22 @@ export default function CashierScreen() {
                     value={item.qty.toString()}
                     onChangeText={(t) => manualQty(item.barcode, t)}
                     keyboardType="numeric"
-                    style={styles.inputQty}
+                    style={sharedStyles.inputQty}
                   />
 
                   <Button 
                     compact 
                     mode="outlined" 
                     onPress={() => updateQty(item.barcode, 1)} 
-                    style={styles.qtyButton}
-                    textColor="#333"
+                    style={sharedStyles.qtyButton}
+                    textColor={Colors.light.text}
                   >
                     +
                   </Button>
 
                   <IconButton
                     icon="delete"
-                    iconColor="red"
+                    iconColor={Colors.light.danger}
                     size={24}
                     onPress={() => removeFromCart(item.barcode)}
                   />
@@ -281,16 +289,31 @@ export default function CashierScreen() {
       <Card style={styles.totalCard}>
         <Card.Content style={styles.totalContent}>
           <View>
-            <Text variant="labelLarge" style={{ color: '#555'}}>Total:</Text>
-            <Text variant="headlineSmall" style={styles.totalText}>Rp {totalPrice?.toLocaleString('id-ID')}</Text>
+            <Text 
+              variant="labelLarge" 
+              style={{ color: Colors.light.subtext}}
+            >
+              Total:
+            </Text>
+
+            <Text 
+              variant="headlineSmall" 
+              style={{
+                fontWeight: 'bold',
+                color: Colors.light.success
+              }}
+            >
+              Rp {totalPrice?.toLocaleString('id-ID')}
+            </Text>
           </View>
+
           <Button 
             mode="contained" 
             icon="cash-register" 
             disabled={cart.length === 0 || loading} 
             onPress={handleCheckout} 
-            buttonColor="#2e7d32"
-            textColor='#fff'
+            buttonColor={Colors.light.success}
+            textColor={Colors.light.surface}
           >
             BAYAR
           </Button>
@@ -301,61 +324,9 @@ export default function CashierScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#f8f9fa' 
-  },
-  centerContainer: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  title: { 
-    textAlign: 'center', 
-    marginVertical: 15, 
-    fontWeight: 'bold', 
-    color: '#6200ee' 
-  },
-  cameraWrapper: { 
-    width: '90%', 
-    height: 160, 
-    alignSelf: 'center', 
-    overflow: 'hidden', 
-    borderRadius: 20, 
-    borderWidth: 3, 
-    borderColor: '#6200ee' 
-  },
-  loader: { 
-    position: 'absolute', 
-    top: '40%', 
-    left: '45%' 
-  },
   cartArea: { 
     flex: 1, 
     paddingHorizontal: 10,
-  },
-  rightControlWrapper: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    width: '42%'
-  },
-  qtyButton: { 
-    width: 30, 
-    height: 40, 
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 0, 
-    marginHorizontal: 3, 
-  },
-  inputQty: { 
-    color: '#333',
-    width: 45, 
-    height: 40, 
-    borderWidth: 1, 
-    borderColor: '#ccc', 
-    textAlign: 'center', 
-    backgroundColor: '#fff', 
-    borderRadius: 4 
   },
   totalCard: { 
     backgroundColor: '#fff', 
@@ -366,10 +337,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', 
     alignItems: 'center', 
     paddingBottom: 15 
-  },
-  totalText: { 
-    fontWeight: 'bold', 
-    color: '#2e7d32' 
   },
   modalContent: {
     backgroundColor: 'white',

@@ -4,7 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, Divider, FAB, Modal, Portal, Snackbar, Text, TextInput } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Colors } from '../../constants/Colors';
 import { getProductByBarcode, saveProduct } from '../firebase/firebaseConfig';
+import { sharedStyles } from '../styles/sharedStyles';
 
 
 export default function InventoryScreen() {
@@ -105,14 +107,14 @@ export default function InventoryScreen() {
 
   const inputTheme = {
     colors: {
-      onSurfaceVariant: '#666',
-      primary: '#6200ee',
+      onSurfaceVariant: Colors.light.subtext,
+      primary: Colors.light.primary,
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text variant="headlineSmall" style={styles.title}>
+    <SafeAreaView style={sharedStyles.container}>
+      <Text variant="headlineSmall" style={sharedStyles.title}>
         Inventory Management
       </Text>
       
@@ -121,14 +123,14 @@ export default function InventoryScreen() {
           <Card.Content>
             <Text 
               variant="titleMedium"
-              style={{ color: '#333', fontWeight: 'bold'}}
+              style={{ color: Colors.light.text, fontWeight: 'bold'}}
             >
               Kelola Stok & Harga
             </Text>
 
             <Text 
               variant="bodySmall"
-              style={{ color: '#666', marginTop: 4}}
+              style={{ color: Colors.light.subtext, marginTop: 4}}
             >
               Klik tombol + di pojok kanan bawah untuk menambah barang baru atau mengedit data barang yang sudah ada.
             </Text>
@@ -162,7 +164,7 @@ export default function InventoryScreen() {
                   onChangeText={t => setForm({...form, barcode: t})} 
                   mode="outlined" 
                   style={[styles.input, { flex: 1}]}
-                  textColor='#333'
+                  textColor={Colors.light.text}
                   theme={inputTheme}
                 />
 
@@ -181,7 +183,7 @@ export default function InventoryScreen() {
                 value={form.name} 
                 onChangeText={t => setForm({...form, name: t})} mode="outlined" 
                 style={styles.input} 
-                textColor='#333'
+                textColor={Colors.light.text}
                 theme={inputTheme}
               />
               
@@ -193,7 +195,7 @@ export default function InventoryScreen() {
                   mode="outlined" 
                   keyboardType="numeric" 
                   style={[styles.input, { width: '48%' }]} 
-                  textColor='#333'
+                  textColor={Colors.light.text}
                   theme={inputTheme}
                 />
 
@@ -204,7 +206,7 @@ export default function InventoryScreen() {
                   mode="outlined" 
                   keyboardType="numeric" 
                   style={[styles.input, { width: '48%' }]} 
-                  textColor='#333'
+                  textColor={Colors.light.text}
                   theme={inputTheme}
                 />
               </View>
@@ -216,14 +218,14 @@ export default function InventoryScreen() {
                 mode="outlined" 
                 keyboardType="numeric" 
                 style={styles.input} 
-                textColor='#333'
+                textColor={Colors.light.text}
                 theme={inputTheme}
               />
               
               <Divider style={{ marginVertical: 10 }} />
               <Text 
                 variant="bodySmall" 
-                style={{ marginBottom: 5, color: 'grey' }}
+                style={{ marginBottom: 5, color: Colors.light.subtext }}
               >
                 Setelan Grosir (Opsional)
               </Text>
@@ -236,7 +238,7 @@ export default function InventoryScreen() {
                   mode="outlined" 
                   keyboardType="numeric" 
                   style={[styles.input, { width: '48%' }]} 
-                  textColor='#333'
+                  textColor={Colors.light.text}
                   placeholder="Contoh: 150000"
                   theme={inputTheme}
                 />
@@ -248,7 +250,7 @@ export default function InventoryScreen() {
                   mode="outlined" 
                   keyboardType="numeric" 
                   style={[styles.input, { width: '48%' }]} 
-                  textColor='#333'
+                  textColor={Colors.light.text}
                   placeholder="Contoh: 12"
                   theme={inputTheme}
                 />
@@ -261,6 +263,8 @@ export default function InventoryScreen() {
                   loading={loading} 
                   disabled={loading} 
                   style={{ flex: 1, marginRight: 5 }}
+                  buttonColor={Colors.light.primary}
+                  textColor={Colors.light.background}
                 >
                   Simpan
                 </Button>
@@ -270,7 +274,8 @@ export default function InventoryScreen() {
                   onPress={() => setVisible(false)} 
                   disabled={loading} 
                   style={{ flex: 1}}
-                  textColor='#6200ee'
+                  buttonColor={Colors.light.background}
+                  textColor={Colors.light.primary}                  
                 >
                   Tutup
                 </Button>
@@ -297,23 +302,13 @@ export default function InventoryScreen() {
         style={styles.fab} 
         onPress={() => setVisible(true)} 
         label="Tambah/Edit" 
-        color="#fff"
+        color={Colors.light.surface}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#f8f9fa' 
-  },
-  title: { 
-    textAlign: 'center', 
-    marginVertical: 15, 
-    fontWeight: 'bold', 
-    color: '#6200ee' 
-  },
   cardInfo: { 
     backgroundColor: '#fff', 
     elevation: 2 
