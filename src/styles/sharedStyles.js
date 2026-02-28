@@ -44,9 +44,14 @@ export const sharedStyles = StyleSheet.create({
     backgroundColor: Colors.light.surface, 
     borderRadius: 4 
   },
-  loader: { 
-    position: 'absolute', 
-    top: '40%', 
-    left: '45%' 
+  cameraLoadingOverlay: {
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#fff',
+    marginTop: 10,
+    fontWeight: 'bold',
   },
 });

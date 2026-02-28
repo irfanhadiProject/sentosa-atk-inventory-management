@@ -107,13 +107,19 @@ export default function RestockScreen() {
       <View style={sharedStyles.cameraWrapper}>
         {cameraActive ? (
         <CameraView 
-          onBarcodeScanned={scanned ? undefined : handleScan} 
+          onBarcodeScanned={(scanned || loading) ? undefined : handleScan} 
           style={StyleSheet.absoluteFillObject} 
         />
         ) : (
           <View style={[StyleSheet.absoluteFillObject, {backgroundColor: '#000' }]}/>
         )}
-        {loading && <ActivityIndicator animating={true} color={Colors.light.surface} style={styles.loader}/>}
+        
+        {loading && (
+          <View style={[StyleSheet.absoluteFillObject, sharedStyles.cameraLoadingOverlay]}>
+            <ActivityIndicator animating={true} color={Colors.light.primary} size="large" />
+            <Text style={sharedStyles.loadingText}>Mengambil Data...</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.listArea}>
@@ -144,7 +150,7 @@ export default function RestockScreen() {
                   <TextInputRN
                     value={item.qty.toString()}
                     onChangeText={(v) => { 
-                      const num = parseInt(v.replace(/[^0-9]/g, '')) || 0;
+                      const num = parseInt(v.replace(/[^0-9]/g, ''));
                       setRestockList(prev => prev.map(i => i.barcode === item.barcode ? {...i, qty: num} : i));
                     }}
                     keyboardType="numeric"

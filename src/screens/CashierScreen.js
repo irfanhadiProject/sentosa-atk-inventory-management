@@ -1,6 +1,6 @@
 import { useIsFocused } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -94,7 +94,7 @@ export default function CashierScreen() {
       setLoading(false);
       
       if (mode === 'cashier') {
-        setTimeout(() => setScanned(false), 2000);
+        setTimeout(() => setScanned(false), 1200);
       }
     }
   };
@@ -145,14 +145,19 @@ export default function CashierScreen() {
       <View style={sharedStyles.cameraWrapper}>
         {cameraActive ? (
         <CameraView 
-          onBarcodeScanned={scanned ? undefined : handleScan} 
+          onBarcodeScanned={(scanned || loading) ? undefined : handleScan} 
           style={StyleSheet.absoluteFillObject} 
         />
         ) : (
           <View style={[StyleSheet.absoluteFillObject, {backgroundColor: '#000' }]}/>
         )}
 
-        {loading && <ActivityIndicator animating={true} color="#fff" style={sharedStyles.loader} />}
+        {loading && (
+          <View style={[StyleSheet.absoluteFillObject, sharedStyles.cameraLoadingOverlay]}>
+            <ActivityIndicator animating={true} color={Colors.light.primary} size="large" />
+            <Text style={sharedStyles.loadingText}>Mengambil Data...</Text>
+          </View>
+        )}
       </View>
 
       <Portal>

@@ -1,10 +1,11 @@
 import { useIsFocused } from '@react-navigation/native';
 import { CameraView } from 'expo-camera';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, Divider, FAB, Modal, Portal, Snackbar, Text, TextInput } from 'react-native-paper';
+import { ActivityIndicator, Button, Card, Divider, FAB, Modal, Portal, Snackbar, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
+import DebouncedInput from '../components/DebouncedInput';
 import { getProductByBarcode, saveProduct } from '../firebase/firebaseConfig';
 import { sharedStyles } from '../styles/sharedStyles';
 
@@ -60,14 +61,22 @@ export default function InventoryScreen() {
         setForm({
           barcode: code.toString(),
           name: data.name || '',
-          price_sell: data.price_sell?.toString() || '',
           price_buy: data.price_buy?.toString() || '',
+          price_sell: data.price_sell?.toString() || '',
           price_wholesale: data.price_wholesale?.toString() || '',
           wholesale_qty: data.wholesale_qty?.toString() || '',
           stock: data.stock?.toString() || '',
         });
       } else {
-        setForm({ ...form, barcode: code.toString() });
+        setForm({ 
+          barcode: code.toString() ,
+          name: '',
+          price_buy: '',
+          price_sell: '',
+          price_wholesale: '',
+          wholesale_qty: '',
+          stock: ''
+        });
         showToast("Barang Baru, Silakan lengkapi data.");
       }
     } catch (e) {
@@ -103,6 +112,13 @@ export default function InventoryScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleInputChange = (field, value) => {
+    setForm(prev => {
+      if (prev[field] === value) return prev;
+      return { ...prev, [field]: value };
+    });
   };
 
   const inputTheme = {
@@ -144,24 +160,47 @@ export default function InventoryScreen() {
           onDismiss={() => !loading && hideModal()} 
           contentContainerStyle={styles.modal}
         >
-          <Text variant="titleLarge" style={styles.modalTitle}>Detail Produk</Text>
-          <Divider style={{ marginBottom: 15 }} />
-
-          {isScanning ? (
-            <View style={styles.miniCameraWrapper}>
-              <CameraView 
-                onBarcodeScanned={({data}) => fetchProduct(data)} 
-                style={StyleSheet.absoluteFillObject} 
-              />
-              <Button mode="contained" onPress={() => setIsScanning(false)} style={styles.btnCancelScan}>Batal Scan</Button>
-            </View>
-          ) : (
-            <ScrollView>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text variant="titleLarge" style={styles.modalTitle}>Detail Produk</Text>
+            <Divider style={{ marginBottom: 15 }} />
+  
+            {isScanning ? (
+              <View style={styles.miniCameraWrapper}>
+                <CameraView 
+                  onBarcodeScanned={
+                    loading 
+                    ? undefined
+                    : ({data}) => fetchProduct(data)
+                  } 
+                  style={StyleSheet.absoluteFillObject} 
+                />
+  
+                {loading && (
+                  <View style={[StyleSheet.absoluteFillObject, sharedStyles.cameraLoadingOverlay]}>
+                    <ActivityIndicator animating={true} color={Colors.light.primary} size="large" />
+                    <Text style={sharedStyles.loadingText}>Mengambil Data...</Text>
+                  </View>
+                )}
+  
+                <Button 
+                  mode="contained" 
+                  onPress={() => setIsScanning(false)} 
+                  style={styles.btnCancelScan}
+                >
+                  Batal Scan
+                </Button>
+              </View>
+            ) : (
+              <View>
               <View style={styles.barcodeRow}>
-                <TextInput 
+                <DebouncedInput 
                   label="Barcode"
                   value={form.barcode} 
-                  onChangeText={t => setForm({...form, barcode: t})} 
+                  onChange={t => handleInputChange('barcode', t)} 
                   mode="outlined" 
                   style={[styles.input, { flex: 1}]}
                   textColor={Colors.light.text}
@@ -178,20 +217,21 @@ export default function InventoryScreen() {
                 </Button>
               </View>
 
-              <TextInput 
+              <DebouncedInput 
                 label="Nama Barang" 
                 value={form.name} 
-                onChangeText={t => setForm({...form, name: t})} mode="outlined" 
+                onChange={t => handleInputChange('name', t)} 
+                mode="outlined" 
                 style={styles.input} 
                 textColor={Colors.light.text}
                 theme={inputTheme}
               />
               
               <View style={styles.row}>
-                <TextInput 
+                <DebouncedInput 
                   label="Harga Modal" 
                   value={form.price_buy} 
-                  onChangeText={t => setForm({...form, price_buy: t})} 
+                  onChange={t => handleInputChange('price_buy', t)} 
                   mode="outlined" 
                   keyboardType="numeric" 
                   style={[styles.input, { width: '48%' }]} 
@@ -199,10 +239,10 @@ export default function InventoryScreen() {
                   theme={inputTheme}
                 />
 
-                <TextInput 
+                <DebouncedInput 
                   label="Harga Jual" 
                   value={form.price_sell} 
-                  onChangeText={t => setForm({...form, price_sell: t})} 
+                  onChange={t => handleInputChange('price_sell', t)} 
                   mode="outlined" 
                   keyboardType="numeric" 
                   style={[styles.input, { width: '48%' }]} 
@@ -211,10 +251,10 @@ export default function InventoryScreen() {
                 />
               </View>
 
-              <TextInput 
+              <DebouncedInput 
                 label="Stok" 
                 value={form.stock} 
-                onChangeText={t => setForm({...form, stock: t})} 
+                onChange={t => handleInputChange('stock', t)} 
                 mode="outlined" 
                 keyboardType="numeric" 
                 style={styles.input} 
@@ -231,10 +271,10 @@ export default function InventoryScreen() {
               </Text>
 
               <View style={styles.row}>
-                <TextInput 
+                <DebouncedInput 
                   label="Harga Grosir" 
                   value={form.price_wholesale} 
-                  onChangeText={t => setForm({...form, price_wholesale: t})} 
+                  onChange={t => handleInputChange('price_wholesale', t)}  
                   mode="outlined" 
                   keyboardType="numeric" 
                   style={[styles.input, { width: '48%' }]} 
@@ -243,10 +283,10 @@ export default function InventoryScreen() {
                   theme={inputTheme}
                 />
 
-                <TextInput 
+                <DebouncedInput 
                   label="Isi per Grosir" 
                   value={form.wholesale_qty} 
-                  onChangeText={t => setForm({...form, wholesale_qty: t})} 
+                  onChange={t => handleInputChange('wholesale_qty', t)}  
                   mode="outlined" 
                   keyboardType="numeric" 
                   style={[styles.input, { width: '48%' }]} 
@@ -280,8 +320,9 @@ export default function InventoryScreen() {
                   Tutup
                 </Button>
               </View>
-            </ScrollView>
+            </View>
           )}
+          </ScrollView>
         </Modal>
 
         <Snackbar
@@ -314,7 +355,8 @@ const styles = StyleSheet.create({
     elevation: 2 
   },
   modal: { 
-    backgroundColor: 'white', 
+    backgroundColor: 'white',
+    justifyContent: 'center',
     padding: 20, 
     margin: 15, 
     borderRadius: 12, 
