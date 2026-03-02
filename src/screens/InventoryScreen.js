@@ -6,9 +6,11 @@ import { ActivityIndicator, Button, Card, Divider, FAB, Modal, Portal, Snackbar,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
 import DebouncedInput from '../components/DebouncedInput';
-import { getProductByBarcode, saveProduct } from '../firebase/firebaseConfig';
+import { getProductByBarcode, getZakatReport, saveProduct, syncInitialAssetValue } from '../firebase/firebaseConfig';
 import { sharedStyles } from '../styles/sharedStyles';
 
+const GOLD_PRICES_PER_GRAM = 1200000;
+const ANNUAL_NISAB = 85 * GOLD_PRICES_PER_GRAM;
 
 export default function InventoryScreen() {
   const isFocused = useIsFocused();
@@ -17,6 +19,10 @@ export default function InventoryScreen() {
   const [isScanning, setIsScanning] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackMsg, setSnackMsg] = useState('');
+  const [globalAsset, setGlobalAsset] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [zakatAmount, setZakatAmount] = useState(0);
+  const isReachedNisab = globalAsset >= ANNUAL_NISAB;
   
   const [form, setForm] = useState({
     barcode: '', 
@@ -32,6 +38,15 @@ export default function InventoryScreen() {
     if (!isFocused) {
       setIsScanning(false);
     }
+  }, [isFocused]);
+
+  useEffect(() => {
+    const fetchInitialReport = async () => {
+      const report = await getZakatReport();
+      setGlobalAsset(report.totalAsset);
+      setZakatAmount(report.zakatAmount);
+    };
+    if (isFocused) fetchInitialReport();
   }, [isFocused]);
 
   const showToast = (message) => {
@@ -105,7 +120,11 @@ export default function InventoryScreen() {
       };
 
       await saveProduct(form.barcode, productData);
-      
+
+      const report = await getZakatReport();
+      setGlobalAsset(report.totalAsset);
+      setZakatAmount(report.zakatAmount);
+
       showToast("Sukses, Data produk berhasil diperbarui!");
       hideModal()
     } catch (e) {
@@ -130,6 +149,34 @@ export default function InventoryScreen() {
     }
   };
 
+  const handleSyncAset = async () => {
+    Alert.alert(
+      "Sinkronisasi Total Aset",
+      "Ini akan menghitung ulang seluruh nilai stok dari database. Lanjutkan?",
+      [
+        { text: "Batal", style: "cancel" },
+        { 
+          text: "Ya, Sinkronkan", 
+          onPress: async () => {
+            setIsSyncing(true);
+            try {
+              await syncInitialAssetValue();
+              const report = await getZakatReport();
+              setGlobalAsset(report.totalAsset);
+              setZakatAmount(report.zakatAmount);
+              showToast("Sinkronisasi Berhasil!");
+            } catch (e) {
+              console.error(e);
+              Alert.alert("Error", "Gagal sinkronisasi");
+            } finally {
+              setIsSyncing(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={sharedStyles.container}>
       <Text variant="headlineSmall" style={sharedStyles.title}>
@@ -137,19 +184,86 @@ export default function InventoryScreen() {
       </Text>
       
       <ScrollView contentContainerStyle={{ padding: 20 }}>
-        <Card style={styles.cardInfo}>
+        <Card style={[styles.cardBase, { backgroundColor: Colors.light.infoCard }]}>
           <Card.Content>
-            <Text 
-              variant="titleMedium"
-              style={{ color: Colors.light.text, fontWeight: 'bold'}}
-            >
+            <View style={styles.flexRowBetween}>
+              <View style={{ flex: 1 }}>
+                <Text variant="labelMedium" style={{ color: Colors.light.subtext }}>
+                  Total Nilai Aset (Harga Jual)
+                </Text>
+                <Text variant="headlineSmall" style={{ color: Colors.light.primary, fontWeight: 'bold' }}>
+                  Rp {globalAsset.toLocaleString()}
+                </Text>
+              </View>
+              <Button 
+                icon="sync" 
+                mode="text" 
+                onPress={handleSyncAset}
+                loading={isSyncing}
+                disabled={isSyncing}
+                textColor={Colors.light.primary}
+              >
+                Sync
+              </Button>
+            </View>
+          </Card.Content>
+        </Card>
+
+        <Card style={[
+          styles.cardBase, 
+          { 
+            backgroundColor: isReachedNisab ? Colors.light.successLight : Colors.light.warningLight,
+            borderLeftWidth: 5,
+            borderLeftColor: isReachedNisab ? Colors.light.success : Colors.light.warning,
+          }
+        ]}>
+          <Card.Content>
+            <View style={styles.flexRow}>
+              <View style={styles.zakatIconWrapper}>
+                <Text style={{ fontSize: 24 }}>{isReachedNisab ? '✅' : '⏳'}</Text>
+              </View>
+              <View style={{ flex: 1, marginLeft: 15 }}>
+                <Text variant="labelMedium" style={{ color: Colors.light.subtext }}>
+                  Status Zakat Perniagaan
+                </Text>
+                
+                <Text variant="titleMedium" style={{ 
+                  color: isReachedNisab ? Colors.light.success : Colors.light.warning, 
+                  fontWeight: 'bold' 
+                }}>
+                  {isReachedNisab ? 'Sudah Mencapai Nisab' : 'Belum Mencapai Nisab'}
+                </Text>
+
+                {isReachedNisab ? (
+                  <View>
+                    <Text variant="headlineSmall" style={{ color: Colors.light.success, fontWeight: 'bold' }}>
+                      Rp {zakatAmount.toLocaleString()}
+                    </Text>
+                    <Text variant="bodySmall" style={{ color: Colors.light.subtext }}>
+                      Wajib dikeluarkan jika sudah berlalu 1 tahun (Haul).
+                    </Text>
+                  </View>
+                ) : (
+                  <View>
+                    <Text variant="bodySmall" style={{ color: Colors.light.text }}>
+                      Nisab: Rp {ANNUAL_NISAB.toLocaleString()}
+                    </Text>
+                    <Text variant="bodySmall" style={{ color: Colors.light.danger }}>
+                      Kurang: Rp {(ANNUAL_NISAB - globalAsset).toLocaleString()} lagi.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </Card.Content>
+        </Card>
+
+        <Card style={styles.cardBase}>
+          <Card.Content>
+            <Text variant="titleMedium" style={{ color: Colors.light.text, fontWeight: 'bold'}}>
               Kelola Stok & Harga
             </Text>
-
-            <Text 
-              variant="bodySmall"
-              style={{ color: Colors.light.subtext, marginTop: 4}}
-            >
+            <Text variant="bodySmall" style={{ color: Colors.light.subtext, marginTop: 4}}>
               Klik tombol + di pojok kanan bawah untuk menambah barang baru atau mengedit data barang yang sudah ada.
             </Text>
           </Card.Content>
@@ -352,26 +466,45 @@ export default function InventoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  cardInfo: { 
-    backgroundColor: '#fff', 
-    elevation: 2 
+  cardBase: { 
+    backgroundColor: Colors.light.surface, 
+    elevation: 2,
+    marginBottom: 15,
+    borderRadius: 12,
+  },
+  flexRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center' 
+  },
+  flexRowBetween: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center' 
+  },
+  zakatIconWrapper: {
+    width: 50,
+    height: 50,
+    backgroundColor: Colors.light.surface,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2
   },
   modal: { 
-    backgroundColor: 'white',
-    justifyContent: 'center',
+    backgroundColor: Colors.light.surface,
     padding: 20, 
     margin: 15, 
     borderRadius: 12, 
     maxHeight: '80%' 
   },
   modalTitle: { 
-    color: '#333',
+    color: Colors.light.text,
     marginBottom: 10, 
     fontWeight: 'bold' 
   },
   input: { 
     marginBottom: 12,
-    backgroundColor: '#fff' 
+    backgroundColor: Colors.light.surface 
   },
   row: { 
     flexDirection: 'row', 
@@ -385,18 +518,22 @@ const styles = StyleSheet.create({
   scanBtn: { 
     marginLeft: 8, 
     height: 50, 
-    justifyContent: 'center' 
+    justifyContent: 'center',
+    backgroundColor: Colors.light.primary
   },
   miniCameraWrapper: { 
     height: 250, 
     overflow: 'hidden', 
     borderRadius: 10, 
-    marginBottom: 15 
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: Colors.light.border
   },
   btnCancelScan: { 
     position: 'absolute', 
     bottom: 10, 
-    alignSelf: 'center' 
+    alignSelf: 'center',
+    backgroundColor: Colors.light.danger
   },
   buttonActionRow: { 
     flexDirection: 'row', 
@@ -407,6 +544,6 @@ const styles = StyleSheet.create({
     margin: 16, 
     right: 0, 
     bottom: 0, 
-    backgroundColor: '#03dac6',
+    backgroundColor: Colors.light.secondary,
   }
 });

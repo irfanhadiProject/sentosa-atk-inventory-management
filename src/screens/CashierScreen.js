@@ -34,7 +34,7 @@ export default function CashierScreen() {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('cashier');
   const [showCheckModal, setShowCheckModal] = useState(false);
-  const [tempProduct, setTempProduct] = useState(null)
+  const [tempProduct, setTempProduct] = useState(null);
   const { cart, addToCart, updateQty, manualQty, removeFromCart, clearCart, totalPrice } = useCart();
 
   useEffect(() => {
@@ -46,19 +46,16 @@ export default function CashierScreen() {
     } else {
       setCameraActive(false);
     }
-
     return () => clearTimeout(timeout);
   }, [isFocused]);
 
   if (!permission?.granted) {
     return (
-      <View style={{
-        flex: 1, 
-        justifyContent: 'center', 
-        alignItems: 'center'
-      }}>
-        <Text style={{ color: Colors.light.text }}>Izin kamera diperlukan</Text>
-        <Button mode="contained" onPress={requestPermission}>Beri Izin</Button>
+      <View style={styles.centerContainer}>
+        <Text style={{ color: Colors.light.text, marginBottom: 10 }}>Izin kamera diperlukan</Text>
+        <Button mode="contained" onPress={requestPermission} buttonColor={Colors.light.primary}>
+          Beri Izin
+        </Button>
       </View>
     );
   }
@@ -75,7 +72,7 @@ export default function CashierScreen() {
           addToCart({ 
             barcode: data, 
             name: result.name, 
-            price_sell: result.price_sell ,
+            price_sell: result.price_sell,
             price_wholesale: result.price_wholesale,
             wholesale_qty: result.wholesale_qty
           });
@@ -86,17 +83,16 @@ export default function CashierScreen() {
             price_sell: result.price_sell || 0,
             stock: result.stock || 0
           });
-          setShowCheckModal(true)
+          setShowCheckModal(true);
         }
       } else {
         Alert.alert("Error", "Barang tidak ditemukan!");
       }
     } catch (e) {
-      console.error(e)
+      console.error(e);
       Alert.alert("Error", "Gagal ambil data.");
     } finally {
       setLoading(false);
-      
       if (mode === 'cashier') {
         setTimeout(() => setScanned(false), 1200);
       }
@@ -107,7 +103,7 @@ export default function CashierScreen() {
     setShowCheckModal(false);
     setTempProduct(null);
     setScanned(false);
-  }
+  };
 
   const handleCheckout = async () => {
     setLoading(true);
@@ -116,7 +112,7 @@ export default function CashierScreen() {
       Alert.alert("Sukses", "Transaksi Berhasil!");
       clearCart();
     } catch (e) {
-      console.error(e)
+      console.error(e);
       Alert.alert("Error", "Gagal update stok.");
     } finally {
       setLoading(false);
@@ -127,7 +123,7 @@ export default function CashierScreen() {
     <SafeAreaView style={sharedStyles.container}>
       <Text variant="headlineSmall" style={sharedStyles.title}>Sentosa Kasir</Text>
 
-      <View style={{ paddingHorizontal: 20, marginBottom: 15}}>
+      <View style={styles.segmentedWrapper}>
         <SegmentedButtons 
           value={mode}
           onValueChange={setMode}
@@ -137,7 +133,7 @@ export default function CashierScreen() {
           ]}
           theme={{
             colors: {
-              secondaryContainer: Colors.light.text,
+              secondaryContainer: Colors.light.primary,
               onSecondaryContainer: Colors.light.surface,
               onSurface: Colors.light.text,
               outline: Colors.light.border,
@@ -148,12 +144,12 @@ export default function CashierScreen() {
       
       <View style={sharedStyles.cameraWrapper}>
         {cameraActive ? (
-        <CameraView 
-          onBarcodeScanned={(scanned || loading) ? undefined : handleScan} 
-          style={StyleSheet.absoluteFillObject} 
-        />
+          <CameraView 
+            onBarcodeScanned={(scanned || loading) ? undefined : handleScan} 
+            style={StyleSheet.absoluteFillObject} 
+          />
         ) : (
-          <View style={[StyleSheet.absoluteFillObject, {backgroundColor: '#000' }]}/>
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000' }]}/>
         )}
 
         {loading && (
@@ -170,73 +166,48 @@ export default function CashierScreen() {
           onDismiss={closeCheckModal} 
           contentContainerStyle={styles.modalContent}
         >
-        {tempProduct && (
-          <View>
-            <Text 
-              variant="titleLarge" 
-              style={{ 
-                color: Colors.light.primary , 
-                fontWeight: 'bold' 
-              }}
-            >
-              {tempProduct.name}
-            </Text>
-
-            <Divider style={{ marginVertical: 10 }}/>
-
-            <Text variant="bodyLarge" style={{ color: Colors.light.text }}>
-              Harga Jual: <Text style={{ fontWeight: 'bold', color: Colors.light.text }}>
-                Rp {tempProduct.price_sell?.toLocaleString('id-ID')}
-              </Text>   
-            </Text>
-
-            <Text variant="bodyLarge" style={{ color: Colors.light.text }}>
-              Stok Saat Ini: <Text style={{ fontWeight: 'bold', color: Colors.light.text  }}>
-                {tempProduct.stock} pcs
+          {tempProduct && (
+            <View>
+              <Text variant="titleLarge" style={styles.modalTitle}>
+                {tempProduct.name}
               </Text>
-            </Text>
-
-            <Text 
-              variant="bodySmall" 
-              style={{ marginTop: 10, color: Colors.light.subtext  }}
-            >
-              Barcode: {tempProduct.barcode}
-            </Text>
-
-            <Button 
-              mode="contained" 
-              onPress={closeCheckModal} 
-              style={{ marginTop: 20 }}
-            >
-              Tutup
-            </Button>
-          </View>
-        )}
+              <Divider style={styles.divider} />
+              <Text variant="bodyLarge" style={styles.infoText}>
+                Harga Jual: <Text style={styles.boldText}>Rp {tempProduct.price_sell?.toLocaleString('id-ID')}</Text>   
+              </Text>
+              <Text variant="bodyLarge" style={styles.infoText}>
+                Stok Saat Ini: <Text style={styles.boldText}>{tempProduct.stock} pcs</Text>
+              </Text>
+              <Text variant="bodySmall" style={styles.barcodeText}>
+                Barcode: {tempProduct.barcode}
+              </Text>
+              <Button 
+                mode="contained" 
+                onPress={closeCheckModal} 
+                style={{ marginTop: 20 }}
+                buttonColor={Colors.light.primary}
+              >
+                Tutup
+              </Button>
+            </View>
+          )}
         </Modal>
       </Portal>
 
       <View style={styles.cartArea}>
-        <ScrollView keyboardShouldPersistTaps="handled">
+        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {cart.map((item) => (
             <List.Item
               key={item.barcode}
               title={item.name}
-              titleStyle={{ 
-                color: Colors.light.text, 
-                fontWeight: 'bold' 
-              }}
+              titleStyle={styles.cartTitle}
               description={() => {
                 const qty = item.qty || 0;
                 const wholesaleQty = item.wholesale_qty || 0;
 
-                if (
-                  item.price_wholesale > 0 &&
-                  wholesaleQty > 0 &&
-                  qty >= wholesaleQty
-                ) {
+                if (item.price_wholesale > 0 && wholesaleQty > 0 && qty >= wholesaleQty) {
                   const packages = Math.floor(qty/wholesaleQty);
                   const units = qty % wholesaleQty;
-
                   return (
                     <Text style={{ color: Colors.light.success }}>
                       {packages} Grosir + {units} Ecer {'\n'}
@@ -244,11 +215,10 @@ export default function CashierScreen() {
                         Total: Rp {((packages * item.price_wholesale) + (units * item.price_sell)).toLocaleString('id-ID')}
                       </Text>
                     </Text>
-                  )
+                  );
                 }
-                
                 return(
-                  <Text style={{ color: Colors.light.subtext}}>
+                  <Text style={{ color: Colors.light.subtext }}>
                     Rp {item.price_sell?.toLocaleString('id-ID')} x {qty}
                   </Text>
                 );
@@ -256,32 +226,25 @@ export default function CashierScreen() {
               right={() => (
                 <View style={sharedStyles.rightControlWrapper}>
                   <Button 
-                    compact 
-                    mode="outlined" 
+                    compact mode="outlined" 
                     onPress={() => updateQty(item.barcode, -1)} 
                     style={sharedStyles.qtyButton}
                     textColor={Colors.light.text}
-                  >
-                    -
-                  </Button>
-
+                    contentStyle={{ width: 35, height: 35 }}
+                  > - </Button>
                   <TextInputRN
                     value={item.qty.toString()}
                     onChangeText={(t) => manualQty(item.barcode, t)}
                     keyboardType="numeric"
                     style={sharedStyles.inputQty}
                   />
-
                   <Button 
-                    compact 
-                    mode="outlined" 
+                    compact mode="outlined" 
                     onPress={() => updateQty(item.barcode, 1)} 
                     style={sharedStyles.qtyButton}
                     textColor={Colors.light.text}
-                  >
-                    +
-                  </Button>
-
+                    contentStyle={{ width: 35, height: 35 }}
+                  > + </Button>
                   <IconButton
                     icon="delete"
                     iconColor={Colors.light.danger}
@@ -298,24 +261,11 @@ export default function CashierScreen() {
       <Card style={styles.totalCard}>
         <Card.Content style={styles.totalContent}>
           <View>
-            <Text 
-              variant="labelLarge" 
-              style={{ color: Colors.light.subtext}}
-            >
-              Total:
-            </Text>
-
-            <Text 
-              variant="headlineSmall" 
-              style={{
-                fontWeight: 'bold',
-                color: Colors.light.success
-              }}
-            >
+            <Text variant="labelLarge" style={{ color: Colors.light.subtext }}>Total:</Text>
+            <Text variant="headlineSmall" style={styles.totalAmount}>
               Rp {totalPrice?.toLocaleString('id-ID')}
             </Text>
           </View>
-
           <Button 
             mode="contained" 
             icon="cash-register" 
@@ -323,6 +273,7 @@ export default function CashierScreen() {
             onPress={handleCheckout} 
             buttonColor={Colors.light.success}
             textColor={Colors.light.surface}
+            contentStyle={{ height: 50 }}
           >
             BAYAR
           </Button>
@@ -333,25 +284,64 @@ export default function CashierScreen() {
 }
 
 const styles = StyleSheet.create({
+  centerContainer: {
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    backgroundColor: Colors.light.background
+  },
+  segmentedWrapper: { 
+    paddingHorizontal: 20, 
+    marginBottom: 15
+  },
   cartArea: { 
     flex: 1, 
     paddingHorizontal: 10,
   },
+  cartTitle: { 
+    color: Colors.light.text, 
+    fontWeight: 'bold' 
+  },
   totalCard: { 
-    backgroundColor: '#fff', 
-    elevation: 10 
+    backgroundColor: Colors.light.surface, 
+    elevation: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   totalContent: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
-    paddingBottom: 15 
+    paddingVertical: 10
+  },
+  totalAmount: {
+    fontWeight: 'bold',
+    color: Colors.light.success
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: Colors.light.surface,
     padding: 25,
     margin: 20,
     borderRadius: 15,
     elevation: 5
+  },
+  modalTitle: { 
+    color: Colors.light.primary, 
+    fontWeight: 'bold' 
+  },
+  divider: { 
+    marginVertical: 10 
+  },
+  infoText: { 
+    color: Colors.light.text,
+    marginBottom: 5 
+  },
+  boldText: { 
+    fontWeight: 'bold', 
+    color: Colors.light.text 
+  },
+  barcodeText: { 
+    marginTop: 10, 
+    color: Colors.light.subtext 
   }
 });
