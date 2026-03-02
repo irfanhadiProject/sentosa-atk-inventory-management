@@ -31,13 +31,14 @@ export default function RestockScreen() {
   if (!permission?.granted) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={{ color: Colors.light.text, marginBottom: 10 }}>
+        <Text style={{ color: Colors.light.text, marginBottom: 20, fontSize: 18 }}>
           Izin kamera diperlukan untuk restock
         </Text>
         <Button 
           mode="contained" 
           onPress={requestPermission}
           buttonColor={Colors.light.primary}
+          textColor={Colors.light.background}
         >
           Beri Izin
         </Button>
@@ -70,7 +71,7 @@ export default function RestockScreen() {
       Alert.alert("Error", "Gagal koneksi ke Database.");
     } finally {
       setLoading(false);
-      setTimeout(() => setScanned(false), 1500); // Dipercepat sedikit agar tidak terlalu lama menunggu
+      setTimeout(() => setScanned(false), 1500);
     }
   };
 

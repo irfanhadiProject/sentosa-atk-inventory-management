@@ -52,8 +52,8 @@ export default function CashierScreen() {
   if (!permission?.granted) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={{ color: Colors.light.text, marginBottom: 10 }}>Izin kamera diperlukan</Text>
-        <Button mode="contained" onPress={requestPermission} buttonColor={Colors.light.primary}>
+        <Text style={{ color: Colors.light.text, marginBottom: 20, fontSize: 18 }}>Izin kamera diperlukan</Text>
+        <Button mode="contained" onPress={requestPermission} buttonColor={Colors.light.primary} textColor={Colors.light.background}>
           Beri Izin
         </Button>
       </View>
@@ -186,6 +186,7 @@ export default function CashierScreen() {
                 onPress={closeCheckModal} 
                 style={{ marginTop: 20 }}
                 buttonColor={Colors.light.primary}
+                textColor={Colors.light.background}
               >
                 Tutup
               </Button>

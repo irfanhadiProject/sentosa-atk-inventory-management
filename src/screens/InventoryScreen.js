@@ -9,7 +9,7 @@ import DebouncedInput from '../components/DebouncedInput';
 import { getProductByBarcode, getZakatReport, saveProduct, syncInitialAssetValue } from '../firebase/firebaseConfig';
 import { sharedStyles } from '../styles/sharedStyles';
 
-const GOLD_PRICES_PER_GRAM = 1200000;
+const GOLD_PRICES_PER_GRAM = 3135000;
 const ANNUAL_NISAB = 85 * GOLD_PRICES_PER_GRAM;
 
 export default function InventoryScreen() {
@@ -306,6 +306,7 @@ export default function InventoryScreen() {
                   mode="contained" 
                   onPress={() => setIsScanning(false)} 
                   style={styles.btnCancelScan}
+                  textColor={Colors.light.background}
                 >
                   Batal Scan
                 </Button>
@@ -328,6 +329,7 @@ export default function InventoryScreen() {
                   mode="contained" 
                   onPress={() => setIsScanning(true)} 
                   style={styles.scanBtn}
+                  textColor={Colors.light.background}
                 >
                   Scan
                 </Button>
