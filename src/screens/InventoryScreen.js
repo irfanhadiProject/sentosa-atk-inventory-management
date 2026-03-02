@@ -45,8 +45,10 @@ export default function InventoryScreen() {
     setForm({ 
       barcode: '', 
       name: '', 
-      price_sell: '', 
       price_buy: '', 
+      price_sell: '',
+      price_wholesale: '',
+      wholesale_qty: '',
       stock: '', 
     });
   }
@@ -311,7 +313,7 @@ export default function InventoryScreen() {
 
                 <Button 
                   mode="outlined"
-                  onPress={() => setVisible(false)} 
+                  onPress={hideModal} 
                   disabled={loading} 
                   style={{ flex: 1}}
                   buttonColor={Colors.light.background}

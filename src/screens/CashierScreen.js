@@ -52,7 +52,11 @@ export default function CashierScreen() {
 
   if (!permission?.granted) {
     return (
-      <View style={styles.centerContainer}>
+      <View style={{
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center'
+      }}>
         <Text style={{ color: Colors.light.text }}>Izin kamera diperlukan</Text>
         <Button mode="contained" onPress={requestPermission}>Beri Izin</Button>
       </View>
