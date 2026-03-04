@@ -14,7 +14,7 @@ import RestockScreen from './src/screens/RestockScreen';
 import Constants from 'expo-constants';
 import { cacheDirectory, createDownloadResumable, getContentUriAsync } from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
-import { Alert, Platform, StyleSheet } from 'react-native';
+import { Alert, Platform, StyleSheet, View } from 'react-native';
 import { Colors } from './constants/Colors';
 
 const UPDATE_URL = "https://raw.githubusercontent.com/irfanhadiProject/sentosa-atk-inventory-management/refs/heads/main/update.json";
@@ -25,6 +25,7 @@ export default function App() {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
+  const appVersion = Constants.expoConfig?.version || "1.0.0";
 
   useEffect(() => {
     const checkUpdate = async () => {
@@ -138,6 +139,11 @@ export default function App() {
           </Portal>
 
           <NavigationContainer>
+            <View style={styles.topHeader}>
+              <Text style={styles.brandText}>Sentosa ATK</Text>
+              <Text style={styles.versionTextTop}>v{appVersion}</Text>
+            </View>
+
             <Tab.Navigator
               screenOptions={({ route }) => ({
                 tabBarIcon: ({ color, size }) => {
@@ -195,5 +201,29 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 12,
     color: Colors.light.text,
-  }
+  },
+  topHeader: {
+    height: 40,
+    backgroundColor: Colors.light.background,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    borderBottomWidth: 0.5,
+    borderBottomColor: Colors.light.border,
+    marginTop: Platform.OS === 'android' ? 30 : 0,
+  },
+  brandText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
+  },
+  versionTextTop: {
+    fontSize: 10,
+    color: 'gray',
+    backgroundColor: Colors.light.background,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
 });
