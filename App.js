@@ -71,8 +71,6 @@ export default function App() {
 
       const downloadResumable = createDownloadResumable(url, fileUri, {}, callback);
       const result = await downloadResumable.downloadAsync();
-      
-      Alert.alert("Sukses Download", "File siap diinstal, membuka installer...");
 
       if (result && result.uri) {
         setIsPreparing(true);
@@ -80,15 +78,19 @@ export default function App() {
         const cUri = await getContentUriAsync(result.uri);
 
         if (Platform.OS === 'android') {
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
           await IntentLauncher.startActivityAsync('android.intent.action.INSTALL_PACKAGE', {
             data: cUri,
-            flags: 1, 
+            flags: 3, 
             type: 'application/vnd.android.package-archive',
           });
         }
 
-        setIsDownloading(false);
-        setIsPreparing(false);
+        setTimeout(() => {
+          setIsDownloading(false);
+          setIsPreparing(false);
+        }, 3000);
       }
     } catch (e) {
       setIsDownloading(false);
