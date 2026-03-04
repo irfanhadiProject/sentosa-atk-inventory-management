@@ -1,15 +1,18 @@
 import { decode, encode } from 'base-64';
-import { initializeApp } from 'firebase/app';
+import { getApp, getApps, initializeApp } from 'firebase/app';
 import {
   collection,
   doc,
   getDoc,
   getDocs,
+  getFirestore,
   increment,
   initializeFirestore,
   persistentLocalCache,
+  query,
   runTransaction,
-  setDoc
+  setDoc,
+  where
 } from 'firebase/firestore';
 
 if (!global.btoa) { global.btoa = encode; }
@@ -25,25 +28,40 @@ const firebaseConfig = {
   measurementId: process.env.EXPO_PUBLIC_MEASUREMENT_ID
 };
 
-const app = initializeApp(firebaseConfig);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({})
-});
+export const db = (() => {
+  try { 
+    return initializeFirestore(app, {
+    localCache: persistentLocalCache({})
+  });
+  } catch (e) {
+    console.error(e)
+    return getFirestore(app);
+  }
+})();
 
 // Synchronize assets value
 export const syncInitialAssetValue = async () => {
   const querySnapshot = await getDocs(collection(db, 'products'));
-  let totalHarta = 0;
+  let totalWealth = 0;
 
   querySnapshot.forEach((doc) => {
     const data = doc.data();
-    totalHarta += (data.stock || 0) * (data.price_sell || 0);
+    totalWealth += (data.stock || 0) * (data.price_sell || 0);
   });
 
   const statsRef = doc(db, 'metadata', 'inventory_stats');
-  await setDoc(statsRef, { total_asset_value: totalHarta }, { merge: true });
-  return totalHarta;
+  await setDoc(statsRef, { total_asset_value: totalWealth }, { merge: true });
+  return totalWealth;
+};
+
+// Create SKU for products
+export const generateSKU = (category, brand, lastId) => {
+  const c = (category || 'ATK').substring(0, 3).toUpperCase().padEnd(3,'X');
+  const b = (brand || 'GEN').substring(0, 3).toUpperCase().padEnd(3, 'X');
+  const i = String(lastId || 0).padStart(3, '0');
+  return `${c}-${b}-${i}`;
 };
 
 
@@ -52,7 +70,15 @@ export const getProductByBarcode = async (barcode) => {
   try {
     const docRef = doc(db, 'products', barcode.trim());
     const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? docSnap.data() : null;
+
+    if (docSnap.exists()) return docSnap.data();
+
+    const q = query(collection(db, 'products'), where("sku", "==", barcode.trim()));
+    const querySnapshot = await getDocs(q);
+
+    if(!querySnapshot.empty) return querySnapshot.docs[0].data();
+
+    return null;
   } catch (error) {
     console.error(error);
     throw error;
@@ -62,15 +88,19 @@ export const getProductByBarcode = async (barcode) => {
 // Save/Update Product (full update)
 export const saveProduct = async (barcode, newData) => {
   const docRef = doc(db, 'products', barcode.trim());
+  const statsRef = doc(db, 'metadata', 'inventory_stats');
 
   try {
     await runTransaction(db, async(transaction) => {
       const oldSnap = await transaction.get(docRef);
-      const oldData = oldSnap.exists() ? oldSnap.data() : null;
+      const statsSnap = await transaction.get(statsRef);
 
+      const oldData = oldSnap.exists() ? oldSnap.data() : null;
       const oldVal = (oldData?.stock || 0) * (oldData?.price_sell || 0);
       const newVal = (newData.stock || 0) * (newData.price_sell || 0);
       const diff = newVal - oldVal;
+
+      const currentTotal = statsSnap.exists() ? statsSnap.data().total_asset_value : 0;
 
       transaction.set(docRef, {
         ...newData,
@@ -78,10 +108,7 @@ export const saveProduct = async (barcode, newData) => {
       }, { merge: true });
 
       if (diff !== 0) {
-        const statsRef = doc(db, 'metadata', 'inventory_stats');
-        const statsDoc = await transaction.get(statsRef);
-        const currentTotal = statsDoc.exists() ? statsDoc.data().total_asset_value : 0;
-        transaction.set(statsRef, { total_asset_value: currentTotal + diff}, { merge: true });
+        transaction.update(statsRef, { total_asset_value: currentTotal + diff}, { merge: true });
       }
     });
   } catch (error) {
@@ -93,6 +120,7 @@ export const saveProduct = async (barcode, newData) => {
 // Update stock function (decrease the number of stock)
 export const updateProductStock = async (barcode, qty) => {
   const docRef = doc(db, 'products', barcode.trim());
+  const statsRef = doc(db, 'metadata', 'inventory_stats');
   
   await runTransaction(db, async (transaction) => {
     const productSnap = await transaction.get(docRef);
@@ -103,8 +131,6 @@ export const updateProductStock = async (barcode, qty) => {
     const valueReduction = price * qty;
 
     transaction.update(docRef, { stock: increment(-qty) });
-
-    const statsRef = doc(db, 'metadata', 'inventory_stats');
     transaction.update(statsRef, { total_asset_value: increment(-valueReduction)});
   })
 };
@@ -117,17 +143,16 @@ export const restockProduct = async (barcode, qty) => {
   try {
     await runTransaction(db, async (transaction) => {
       const productSnap = await transaction.get(docRef);
+      const statsSnap = await transaction.get(statsRef);
+
       if (!productSnap.exists()) throw "Produk tidak ditemukan";
 
       const product = productSnap.data();
       const price = product.price_sell || 0;
       const valueAddition = price * qty;
-      
-      const statsSnap = await transaction.get(statsRef);
       const currentTotal = statsSnap.exists() ? statsSnap.data().total_asset_value : 0;
 
       transaction.update(docRef, { stock: increment(qty) });
-
       transaction.set(statsRef, { 
         total_asset_value: currentTotal + valueAddition 
       }, { merge: true });

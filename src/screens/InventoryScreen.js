@@ -1,12 +1,11 @@
 import { useIsFocused } from '@react-navigation/native';
 import { CameraView } from 'expo-camera';
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Button, Card, Divider, FAB, Modal, Portal, Snackbar, Text } from 'react-native-paper';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Button, Card, Divider, FAB, Snackbar, Text, TextInput } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
-import DebouncedInput from '../components/DebouncedInput';
-import { getProductByBarcode, getZakatReport, saveProduct, syncInitialAssetValue } from '../firebase/firebaseConfig';
+import { generateSKU, getProductByBarcode, getZakatReport, saveProduct, syncInitialAssetValue } from '../firebase/firebaseConfig';
 import { sharedStyles } from '../styles/sharedStyles';
 
 const GOLD_PRICES_PER_GRAM = 3135000;
@@ -14,7 +13,7 @@ const ANNUAL_NISAB = 85 * GOLD_PRICES_PER_GRAM;
 
 export default function InventoryScreen() {
   const isFocused = useIsFocused();
-  const [visible, setVisible] = useState(false);
+  const [isFormVisible, setIsFormVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
@@ -27,6 +26,9 @@ export default function InventoryScreen() {
   const [form, setForm] = useState({
     barcode: '', 
     name: '', 
+    category: '',
+    brand: '',
+    sku: '',
     price_buy: '', 
     price_sell: '',
     price_wholesale: '',
@@ -49,17 +51,27 @@ export default function InventoryScreen() {
     if (isFocused) fetchInitialReport();
   }, [isFocused]);
 
+  useEffect(() => {
+    if (form?.category?.length >= 3 && form?.brand?.length >= 3 && !form.sku) {
+      const newSku = generateSKU(form.category, form.brand, Math.floor(Math.random() * 999));
+      setForm(prev => ({ ...prev, sku: newSku}));
+    }
+  }, [form.category, form.brand]);
+
   const showToast = (message) => {
     setSnackMsg(message);
     setSnackbarVisible(true);
   }
 
-  const hideModal = () => {
-    setVisible(false);
+  const hideForm = () => {
+    setIsFormVisible(false);
     setIsScanning(false);
     setForm({ 
       barcode: '', 
-      name: '', 
+      name: '',
+      category: '',
+      brand: '',
+      sku: '',
       price_buy: '', 
       price_sell: '',
       price_wholesale: '',
@@ -78,6 +90,9 @@ export default function InventoryScreen() {
         setForm({
           barcode: code.toString(),
           name: data.name || '',
+          category: data.category || '',
+          brand: data.brand || '',
+          sku: data.sku || '',
           price_buy: data.price_buy?.toString() || '',
           price_sell: data.price_sell?.toString() || '',
           price_wholesale: data.price_wholesale?.toString() || '',
@@ -88,6 +103,9 @@ export default function InventoryScreen() {
         setForm({ 
           barcode: code.toString() ,
           name: '',
+          category: '',
+          brand: '',
+          sku: '',
           price_buy: '',
           price_sell: '',
           price_wholesale: '',
@@ -106,12 +124,17 @@ export default function InventoryScreen() {
   };
 
   const handleSaveProduct = async () => {
-    if (!form.barcode || !form.name) return Alert.alert("Error", "Barcode dan Nama wajib diisi!");
+    const finalBarcode = form.barcode.trim() || form.sku;
+
+    if (!finalBarcode || !form.name) return Alert.alert("Error", "Barcode/SKU dan Nama wajib diisi!");
     
     setLoading(true);
     try {
       const productData = {
         name: form.name,
+        category: form.category,
+        brand: form.brand,
+        sku: form.sku,
         price_buy: parseInt(form.price_buy) || 0,
         price_sell: parseInt(form.price_sell) || 0,
         price_wholesale: parseInt(form.price_wholesale) || 0,
@@ -119,14 +142,14 @@ export default function InventoryScreen() {
         stock: parseInt(form.stock) || 0,
       };
 
-      await saveProduct(form.barcode, productData);
+      await saveProduct(finalBarcode, productData);
 
       const report = await getZakatReport();
       setGlobalAsset(report.totalAsset);
       setZakatAmount(report.zakatAmount);
 
       showToast("Sukses, Data produk berhasil diperbarui!");
-      hideModal()
+      hideForm()
     } catch (e) {
       console.error(e)
       Alert.alert("Error", "Gagal menyimpan data.");
@@ -136,10 +159,10 @@ export default function InventoryScreen() {
   };
 
   const handleInputChange = (field, value) => {
-    setForm(prev => {
-      if (prev[field] === value) return prev;
-      return { ...prev, [field]: value };
-    });
+    setForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const inputTheme = {
@@ -176,6 +199,223 @@ export default function InventoryScreen() {
       ]
     );
   };
+
+  if (isFormVisible) {
+    return (
+      <SafeAreaView style={sharedStyles.container}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding': 'height'}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            style={{ padding: 20 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text variant="titleLarge" style={styles.formTitle}>Detail Produk</Text>
+            <Divider style={{ marginBottom: 15 }} />
+  
+            {isScanning ? (
+              <View style={styles.miniCameraWrapper}>
+                <CameraView 
+                  onBarcodeScanned={
+                    loading 
+                    ? undefined
+                    : ({data}) => fetchProduct(data)
+                  } 
+                  style={StyleSheet.absoluteFillObject} 
+                />
+  
+                {loading && (
+                  <View style={[StyleSheet.absoluteFillObject, sharedStyles.cameraLoadingOverlay]}>
+                    <ActivityIndicator animating={true} color={Colors.light.primary} size="large" />
+                    <Text style={sharedStyles.loadingText}>Mengambil Data...</Text>
+                  </View>
+                )}
+  
+                <Button 
+                  mode="contained" 
+                  onPress={() => setIsScanning(false)} 
+                  style={styles.btnCancelScan}
+                  textColor={Colors.light.background}
+                >
+                  Batal Scan
+                </Button>
+              </View>
+            ) : (
+              <View>
+              <View style={styles.barcodeRow}>
+                <TextInput 
+                  label="Barcode"
+                  value={form.barcode} 
+                  onChangeText={t => handleInputChange('barcode', t)} 
+                  mode="outlined" 
+                  style={[styles.input, { flex: 1}]}
+                  textColor={Colors.light.text}
+                  theme={inputTheme}
+                />
+  
+                <Button 
+                  icon="camera" 
+                  mode="contained" 
+                  onPress={() => setIsScanning(true)} 
+                  style={styles.scanBtn}
+                  textColor={Colors.light.background}
+                >
+                  Scan
+                </Button>
+              </View>
+  
+              <TextInput 
+                label="Nama Barang" 
+                value={form.name} 
+                onChangeText={t => handleInputChange('name', t)} 
+                mode="outlined" 
+                style={styles.input} 
+                textColor={Colors.light.text}
+                theme={inputTheme}
+              />
+  
+              <View style={styles.row}>
+                <TextInput 
+                  label="Kategori" 
+                  value={form.category} 
+                  onChangeText={t => handleInputChange('category', t)} mode="outlined" 
+                  style={[styles.input, { width: '48%' }]}
+                  textColor={Colors.light.text}
+                  theme={inputTheme}
+                />
+  
+                <TextInput 
+                  label="Merk" 
+                  value={form.brand} 
+                  onChangeText={t => handleInputChange('brand', t)} mode="outlined" 
+                  style={[styles.input, { width: '48%' }]} 
+                  textColor={Colors.light.text}
+                  theme={inputTheme}
+                />
+              </View>
+  
+              <View 
+                style={[
+                  styles.cardBase, 
+                  {
+                    padding: 10, 
+                    backgroundColor: Colors.light.background, 
+                    marginBottom: 15
+                  }
+                ]}
+              >
+                <Text variant="labelSmall">
+                  SKU INTERNAL (Otomatis):
+                </Text>
+                
+                <Text variant="titleMedium" style={{fontWeight: 'bold'}}>
+                  {form.sku || 'Akan terisi otomatis...'}
+                </Text>
+              </View>
+              
+              <View style={styles.row}>
+                <TextInput 
+                  label="Harga Modal" 
+                  value={form.price_buy} 
+                  onChangeText={t => handleInputChange('price_buy', t)} 
+                  mode="outlined" 
+                  keyboardType="numeric" 
+                  style={[styles.input, { width: '48%' }]} 
+                  textColor={Colors.light.text}
+                  theme={inputTheme}
+                />
+  
+                <TextInput 
+                  label="Harga Jual" 
+                  value={form.price_sell} 
+                  onChangeText={t => handleInputChange('price_sell', t)} 
+                  mode="outlined" 
+                  keyboardType="numeric" 
+                  style={[styles.input, { width: '48%' }]} 
+                  textColor={Colors.light.text}
+                  theme={inputTheme}
+                />
+              </View>
+  
+              <TextInput 
+                label="Stok" 
+                value={form.stock} 
+                onChangeText={t => handleInputChange('stock', t)} 
+                mode="outlined" 
+                keyboardType="numeric" 
+                style={styles.input} 
+                textColor={Colors.light.text}
+                theme={inputTheme}
+              />
+              
+              <Divider style={{ marginVertical: 10 }} />
+              <Text 
+                variant="bodySmall" 
+                style={{ marginBottom: 5, color: Colors.light.subtext }}
+              >
+                Setelan Grosir (Opsional)
+              </Text>
+  
+              <View style={styles.row}>
+                <TextInput 
+                  label="Harga Grosir" 
+                  value={form.price_wholesale} 
+                  onChangeText={t => handleInputChange('price_wholesale', t)}  
+                  mode="outlined" 
+                  keyboardType="numeric" 
+                  style={[styles.input, { width: '48%' }]} 
+                  textColor={Colors.light.text}
+                  placeholder="Contoh: 150000"
+                  theme={inputTheme}
+                />
+  
+                <TextInput 
+                  label="Isi per Grosir" 
+                  value={form.wholesale_qty} 
+                  onChangeText={t => handleInputChange('wholesale_qty', t)}  
+                  mode="outlined" 
+                  keyboardType="numeric" 
+                  style={[styles.input, { width: '48%' }]} 
+                  textColor={Colors.light.text}
+                  placeholder="Contoh: 12"
+                  theme={inputTheme}
+                />
+              </View>
+  
+              <View style={styles.buttonActionRow}>
+                <Button 
+                  mode="contained" 
+                  onPress={handleSaveProduct} 
+                  loading={loading} 
+                  disabled={loading} 
+                  style={{ flex: 1, marginRight: 5 }}
+                  buttonColor={Colors.light.primary}
+                  textColor={Colors.light.background}
+                >
+                  Simpan
+                </Button>
+  
+                <Button 
+                  mode="outlined"
+                  onPress={hideForm} 
+                  disabled={loading} 
+                  style={{ flex: 1}}
+                  buttonColor={Colors.light.background}
+                  textColor={Colors.light.primary}                  
+                >
+                  Tutup
+                </Button>
+              </View>
+            </View>
+          )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={sharedStyles.container}>
@@ -270,196 +510,23 @@ export default function InventoryScreen() {
         </Card>
       </ScrollView>
 
-      <Portal>
-        <Modal 
-          visible={visible} 
-          onDismiss={() => !loading && hideModal()} 
-          contentContainerStyle={styles.modal}
-        >
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            <Text variant="titleLarge" style={styles.modalTitle}>Detail Produk</Text>
-            <Divider style={{ marginBottom: 15 }} />
-  
-            {isScanning ? (
-              <View style={styles.miniCameraWrapper}>
-                <CameraView 
-                  onBarcodeScanned={
-                    loading 
-                    ? undefined
-                    : ({data}) => fetchProduct(data)
-                  } 
-                  style={StyleSheet.absoluteFillObject} 
-                />
-  
-                {loading && (
-                  <View style={[StyleSheet.absoluteFillObject, sharedStyles.cameraLoadingOverlay]}>
-                    <ActivityIndicator animating={true} color={Colors.light.primary} size="large" />
-                    <Text style={sharedStyles.loadingText}>Mengambil Data...</Text>
-                  </View>
-                )}
-  
-                <Button 
-                  mode="contained" 
-                  onPress={() => setIsScanning(false)} 
-                  style={styles.btnCancelScan}
-                  textColor={Colors.light.background}
-                >
-                  Batal Scan
-                </Button>
-              </View>
-            ) : (
-              <View>
-              <View style={styles.barcodeRow}>
-                <DebouncedInput 
-                  label="Barcode"
-                  value={form.barcode} 
-                  onChange={t => handleInputChange('barcode', t)} 
-                  mode="outlined" 
-                  style={[styles.input, { flex: 1}]}
-                  textColor={Colors.light.text}
-                  theme={inputTheme}
-                />
-
-                <Button 
-                  icon="camera" 
-                  mode="contained" 
-                  onPress={() => setIsScanning(true)} 
-                  style={styles.scanBtn}
-                  textColor={Colors.light.background}
-                >
-                  Scan
-                </Button>
-              </View>
-
-              <DebouncedInput 
-                label="Nama Barang" 
-                value={form.name} 
-                onChange={t => handleInputChange('name', t)} 
-                mode="outlined" 
-                style={styles.input} 
-                textColor={Colors.light.text}
-                theme={inputTheme}
-              />
-              
-              <View style={styles.row}>
-                <DebouncedInput 
-                  label="Harga Modal" 
-                  value={form.price_buy} 
-                  onChange={t => handleInputChange('price_buy', t)} 
-                  mode="outlined" 
-                  keyboardType="numeric" 
-                  style={[styles.input, { width: '48%' }]} 
-                  textColor={Colors.light.text}
-                  theme={inputTheme}
-                />
-
-                <DebouncedInput 
-                  label="Harga Jual" 
-                  value={form.price_sell} 
-                  onChange={t => handleInputChange('price_sell', t)} 
-                  mode="outlined" 
-                  keyboardType="numeric" 
-                  style={[styles.input, { width: '48%' }]} 
-                  textColor={Colors.light.text}
-                  theme={inputTheme}
-                />
-              </View>
-
-              <DebouncedInput 
-                label="Stok" 
-                value={form.stock} 
-                onChange={t => handleInputChange('stock', t)} 
-                mode="outlined" 
-                keyboardType="numeric" 
-                style={styles.input} 
-                textColor={Colors.light.text}
-                theme={inputTheme}
-              />
-              
-              <Divider style={{ marginVertical: 10 }} />
-              <Text 
-                variant="bodySmall" 
-                style={{ marginBottom: 5, color: Colors.light.subtext }}
-              >
-                Setelan Grosir (Opsional)
-              </Text>
-
-              <View style={styles.row}>
-                <DebouncedInput 
-                  label="Harga Grosir" 
-                  value={form.price_wholesale} 
-                  onChange={t => handleInputChange('price_wholesale', t)}  
-                  mode="outlined" 
-                  keyboardType="numeric" 
-                  style={[styles.input, { width: '48%' }]} 
-                  textColor={Colors.light.text}
-                  placeholder="Contoh: 150000"
-                  theme={inputTheme}
-                />
-
-                <DebouncedInput 
-                  label="Isi per Grosir" 
-                  value={form.wholesale_qty} 
-                  onChange={t => handleInputChange('wholesale_qty', t)}  
-                  mode="outlined" 
-                  keyboardType="numeric" 
-                  style={[styles.input, { width: '48%' }]} 
-                  textColor={Colors.light.text}
-                  placeholder="Contoh: 12"
-                  theme={inputTheme}
-                />
-              </View>
-
-              <View style={styles.buttonActionRow}>
-                <Button 
-                  mode="contained" 
-                  onPress={handleSaveProduct} 
-                  loading={loading} 
-                  disabled={loading} 
-                  style={{ flex: 1, marginRight: 5 }}
-                  buttonColor={Colors.light.primary}
-                  textColor={Colors.light.background}
-                >
-                  Simpan
-                </Button>
-
-                <Button 
-                  mode="outlined"
-                  onPress={hideModal} 
-                  disabled={loading} 
-                  style={{ flex: 1}}
-                  buttonColor={Colors.light.background}
-                  textColor={Colors.light.primary}                  
-                >
-                  Tutup
-                </Button>
-              </View>
-            </View>
-          )}
-          </ScrollView>
-        </Modal>
-
-        <Snackbar
-          visible={snackbarVisible}
-          onDismiss={() => setSnackbarVisible(false)}
-          duration={2500}
-          action={{ 
-            label: 'OK', 
-            onPress: () => setSnackbarVisible(false) 
-          }}
-        >
-          {snackMsg}
-        </Snackbar>
-      </Portal>
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={2500}
+        wrapperStyle={{ bottom: 80 }}
+        action={{ 
+          label: 'OK', 
+          onPress: () => setSnackbarVisible(false) 
+        }}
+      >
+        {snackMsg}
+      </Snackbar>
 
       <FAB 
         icon="plus" 
         style={styles.fab} 
-        onPress={() => setVisible(true)} 
+        onPress={() => setIsFormVisible(true)} 
         label="Tambah/Edit" 
         color={Colors.light.surface}
       />
@@ -492,14 +559,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 2
   },
-  modal: { 
-    backgroundColor: Colors.light.surface,
-    padding: 20, 
-    margin: 15, 
-    borderRadius: 12, 
-    maxHeight: '80%' 
-  },
-  modalTitle: { 
+  formTitle: { 
     color: Colors.light.text,
     marginBottom: 10, 
     fontWeight: 'bold' 
