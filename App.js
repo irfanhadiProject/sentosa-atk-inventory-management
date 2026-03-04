@@ -1,8 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
-import React, { useEffect } from 'react';
-import { Provider as PaperProvider } from 'react-native-paper';
+import React, { useEffect, useState } from 'react';
+import { Card, Modal, Provider as PaperProvider, Portal, ProgressBar, Text } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Import Screens & Context
@@ -14,13 +14,18 @@ import RestockScreen from './src/screens/RestockScreen';
 import Constants from 'expo-constants';
 import { cacheDirectory, createDownloadResumable, getContentUriAsync } from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, StyleSheet } from 'react-native';
+import { Colors } from './constants/Colors';
 
 const UPDATE_URL = "https://raw.githubusercontent.com/irfanhadiProject/sentosa-atk-inventory-management/refs/heads/main/update.json";
 
 const Tab = createBottomTabNavigator();
 
 export default function App() {
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(false);
+
   useEffect(() => {
     const checkUpdate = async () => {
       try {
@@ -47,24 +52,49 @@ export default function App() {
   }, []);
 
   const downloadAndInstall = async (url) => {
-    const fileUri = cacheDirectory + "SentosaATK_Update.apk";
-    
-    try {
-      const downloadResumable = createDownloadResumable(url, fileUri);
-      const { uri } = await downloadResumable.downloadAsync();
-      
-      const cUri = await getContentUriAsync(uri);
+    if (!url) {
+      Alert.alert("Error", "Link download tidak ditemukan di server.");
+      return;
+    }
 
-      if (Platform.OS === 'android') {
-        await IntentLauncher.startActivityAsync('android.intent.action.INSTALL_PACKAGE', {
-          data: cUri,
-          flags: 1, 
-          type: 'application/vnd.android.package-archive',
-        });
+    const fileUri = cacheDirectory + "SentosaATK_Update.apk";
+    setIsDownloading(true)
+    setIsPreparing(false);
+    setDownloadProgress(0);
+
+    try {
+      const callback = (downloadProgress) => {
+        const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
+        setDownloadProgress(progress);
+      };
+
+      const downloadResumable = createDownloadResumable(url, fileUri, {}, callback);
+      const result = await downloadResumable.downloadAsync();
+      
+      Alert.alert("Sukses Download", "File siap diinstal, membuka installer...");
+
+      if (result && result.uri) {
+        setIsPreparing(true);
+
+        const cUri = await getContentUriAsync(result.uri);
+
+        if (Platform.OS === 'android') {
+          await IntentLauncher.startActivityAsync('android.intent.action.INSTALL_PACKAGE', {
+            data: cUri,
+            flags: 1, 
+            type: 'application/vnd.android.package-archive',
+          });
+        }
+
+        setIsDownloading(false);
+        setIsPreparing(false);
       }
     } catch (e) {
+      setIsDownloading(false);
+      setIsPreparing(false);
+
       console.error(e);
-      Alert.alert("Gagal", "Gagal mengunduh atau membuka installer.");
+      Alert.alert("Gagal", e.toString());
     }
   };
 
@@ -72,6 +102,41 @@ export default function App() {
     <SafeAreaProvider>
       <PaperProvider>
         <CartProvider>
+          <Portal>
+            <Modal 
+              visible={isDownloading} 
+              dismissable={false} 
+              contentContainerStyle={styles.modalContainer}
+            >
+              <Card style={styles.card}>
+                <Card.Content>
+                  <Text variant="titleMedium" style={styles.title}>
+                    {isPreparing ? "Menyiapkan Instalasi" : "Mengunduh Update"}
+                  </Text>
+
+                  <ProgressBar 
+                    progress={downloadProgress} 
+                    indeterminate={isPreparing}
+                    color={Colors.light.primary} 
+                    style={styles.progressBar} 
+                  />
+
+                  {!isPreparing && (
+                    <Text style={styles.percentage}>
+                      {Math.round(downloadProgress * 100)}%
+                    </Text>
+                  )}
+
+                  <Text style={styles.subtitle}>
+                    {isPreparing 
+                      ? "Sedang membuka installer Android, mohon tunggu"
+                      : "Mohon jangan tutup aplikasi sampai installer muncul"}
+                  </Text>
+                </Card.Content>
+              </Card>
+            </Modal>
+          </Portal>
+
           <NavigationContainer>
             <Tab.Navigator
               screenOptions={({ route }) => ({
@@ -82,7 +147,7 @@ export default function App() {
                   else if (route.name === 'Produk') iconName = 'archive-settings';
                   return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
                 },
-                tabBarActiveTintColor: '#6200ee',
+                tabBarActiveTintColor: Colors.light.primary,
                 tabBarInactiveTintColor: 'gray',
                 headerShown: false,
               })}
@@ -97,3 +162,38 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  modalContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  card: {
+    width: '100%',
+    padding: 10,
+    backgroundColor: Colors.light.background,
+  },
+  title: {
+    textAlign: 'center',
+    marginBottom: 15,
+    color: Colors.light.text,
+    fontWeight: 'bold',
+  },
+  progressBar: {
+    height: 10,
+    borderRadius: 5,
+  },
+  percentage: {
+    textAlign: 'center',
+    marginTop: 10,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
+  },
+  subtitle: {
+    textAlign: 'center',
+    marginTop: 10,
+    fontSize: 12,
+    color: Colors.light.text,
+  }
+});
