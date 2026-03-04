@@ -2,14 +2,14 @@
   "expo": {
     "name": "Sentosa ATK",
     "slug": "sistem-inventaris-sentosa-atk",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "sisteminventarissentosaatk",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "buildNumber": "6",
+      "buildNumber": "7",
       "supportsTablet": true
     },
     "android": {
@@ -21,7 +21,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "versionCode": 6,
+      "versionCode": 7,
       "package": "com.anonymous.sisteminventarissentosaatk"
     },
     "web": {
