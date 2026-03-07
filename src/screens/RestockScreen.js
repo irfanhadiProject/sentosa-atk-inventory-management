@@ -106,8 +106,9 @@ export default function RestockScreen() {
       </Text>
 
       <View style={sharedStyles.cameraWrapper}>
-        {cameraActive ? (
+        {cameraActive && isFocused ? (
           <CameraView 
+            key="restock-camera-resource"
             onBarcodeScanned={(scanned || loading) ? undefined : handleScan} 
             style={StyleSheet.absoluteFillObject} 
           />

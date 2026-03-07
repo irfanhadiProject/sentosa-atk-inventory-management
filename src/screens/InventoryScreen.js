@@ -52,11 +52,27 @@ export default function InventoryScreen() {
   }, [isFocused]);
 
   useEffect(() => {
-    if (form?.category?.length >= 3 && form?.brand?.length >= 3 && !form.sku) {
-      const newSku = generateSKU(form.category, form.brand, Math.floor(Math.random() * 999));
-      setForm(prev => ({ ...prev, sku: newSku}));
+    let isMounted = true;
+
+    const updateSku = async () => {
+      const category = form?.category?.trim() || "";
+      const brand = form?.brand?.trim() || "";
+
+      if (category.length >= 3 && brand.length >= 3 && !form.sku) {
+        try {
+          const newSku = await generateSKU(category, brand, form.barcode);
+          if (isMounted) {
+            setForm(prev => ({ ...prev, sku: newSku}));
+          }
+        } catch (error) {
+          console.error("Gagal generate SKU:", error);
+        }
+      }
     }
-  }, [form.category, form.brand]);
+
+    updateSku();
+    return () => { isMounted = false; };
+  }, [form.category, form.brand, form.sku, form.barcode]);
 
   const showToast = (message) => {
     setSnackMsg(message);
@@ -159,10 +175,15 @@ export default function InventoryScreen() {
   };
 
   const handleInputChange = (field, value) => {
-    setForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setForm(prev => {
+      const newData = { ...prev, [field]: value};
+
+      if (field === "category" || field === "brand") {
+        newData.sku = "";
+      }
+
+      return newData
+    });
   };
 
   const inputTheme = {
@@ -216,9 +237,10 @@ export default function InventoryScreen() {
             <Text variant="titleLarge" style={styles.formTitle}>Detail Produk</Text>
             <Divider style={{ marginBottom: 15 }} />
   
-            {isScanning ? (
+            {isScanning && isFocused && (
               <View style={styles.miniCameraWrapper}>
                 <CameraView 
+                  key="inventory-camera-resource"
                   onBarcodeScanned={
                     loading 
                     ? undefined
@@ -243,8 +265,9 @@ export default function InventoryScreen() {
                   Batal Scan
                 </Button>
               </View>
-            ) : (
-              <View>
+            )}
+
+            <View>
               <View style={styles.barcodeRow}>
                 <TextInput 
                   label="Barcode"
@@ -410,7 +433,7 @@ export default function InventoryScreen() {
                 </Button>
               </View>
             </View>
-          )}
+          
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

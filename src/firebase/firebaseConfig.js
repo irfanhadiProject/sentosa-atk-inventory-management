@@ -8,6 +8,8 @@ import {
   getFirestore,
   increment,
   initializeFirestore,
+  limit,
+  orderBy,
   persistentLocalCache,
   query,
   runTransaction,
@@ -35,8 +37,8 @@ export const db = (() => {
     return initializeFirestore(app, {
     localCache: persistentLocalCache({})
   });
-  } catch (e) {
-    console.error(e)
+  } catch (error) {
+    console.error(error)
     return getFirestore(app);
   }
 })();
@@ -57,13 +59,45 @@ export const syncInitialAssetValue = async () => {
 };
 
 // Create SKU for products
-export const generateSKU = (category, brand, lastId) => {
+export const generateSKU = async (category, brand, excludeBarcode = null) => {
+  if (!category || !brand) return '';
+
   const c = (category || 'ATK').substring(0, 3).toUpperCase().padEnd(3,'X');
   const b = (brand || 'GEN').substring(0, 3).toUpperCase().padEnd(3, 'X');
-  const i = String(lastId || 0).padStart(3, '0');
-  return `${c}-${b}-${i}`;
-};
+  const prefix = `${c}-${b}`;
 
+  const producsRef = collection(db, 'products');
+
+  const q = query(
+    producsRef,
+    where("sku", ">=", prefix),
+    where("sku", "<=", prefix + "\uf8ff"),
+    orderBy("sku", "desc"),
+    limit(2)
+  );
+
+  try {
+    const querySnapshot = await getDocs(q);
+    let nextNumber = 0;
+
+    if (!querySnapshot.empty) {
+      const lastDoc = querySnapshot.docs.find(doc => doc.id !== excludeBarcode);
+
+      if (lastDoc) {
+        const lastSku = querySnapshot.docs[0].data().sku;
+        const parts = lastSku.split("-");
+        const lastNum = parseInt(parts[parts.length - 1]);
+        nextNumber = isNaN(lastNum) ? 0 : lastNum + 1;
+      }
+    }
+
+    const sequence = String(nextNumber).padStart(3, '0');
+    return `${prefix}-${sequence}`;
+  } catch (error) {
+    console.error(error);
+    return `${prefix}-000`;
+  }
+};
 
 // Get product function
 export const getProductByBarcode = async (barcode) => {

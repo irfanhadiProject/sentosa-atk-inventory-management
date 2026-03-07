@@ -126,7 +126,11 @@ export default function CashierScreen() {
       <View style={styles.segmentedWrapper}>
         <SegmentedButtons 
           value={mode}
-          onValueChange={setMode}
+          onValueChange={(val) => {
+            setCameraActive(false);
+            setMode(val);
+            setTimeout(() => setCameraActive(true), 150);
+          }}
           buttons={[
             { value: 'cashier', label: 'Mode Kasir', icon: 'cart' },
             { value: 'check', label: 'Cek Stok/Harga', icon: 'magnify' }
@@ -143,10 +147,12 @@ export default function CashierScreen() {
       </View>
       
       <View style={sharedStyles.cameraWrapper}>
-        {cameraActive ? (
+        {cameraActive && isFocused ? (
           <CameraView 
+            key={`camera-${mode}-${isFocused}`}
             onBarcodeScanned={(scanned || loading) ? undefined : handleScan} 
             style={StyleSheet.absoluteFillObject} 
+            facing="back"
           />
         ) : (
           <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000' }]}/>
