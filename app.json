@@ -7,22 +7,28 @@
     "icon": "./assets/images/icon.png",
     "scheme": "sisteminventarissentosaatk",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "buildNumber": "8",
       "supportsTablet": true
     },
     "android": {
+      "permissions": [
+        "REQUEST_INSTALL_PACKAGES"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "versionCode": 8,
-      "package": "com.anonymous.sisteminventarissentosaatk"
+      "package": "com.anonymous.sisteminventarissentosaatk",
+      "googleServicesFile": "./google-services.json"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d9e98c14-1318-432b-88a3-3889af0bf951",
+      "fallbackToCacheTimeout": 0
     },
     "web": {
       "output": "static",
@@ -42,17 +48,20 @@
           }
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "@react-native-firebase/app"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "extra": {
       "router": {},
       "eas": {
         "projectId": "d9e98c14-1318-432b-88a3-3889af0bf951"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }

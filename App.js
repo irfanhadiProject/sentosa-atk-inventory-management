@@ -16,6 +16,7 @@ import { cacheDirectory, createDownloadResumable, getContentUriAsync } from 'exp
 import * as IntentLauncher from 'expo-intent-launcher';
 import { Alert, Platform, StyleSheet, View } from 'react-native';
 import { Colors } from './constants/Colors';
+import { checkOTAUpdate } from './src/services/otaUpdateService';
 
 const UPDATE_URL = "https://raw.githubusercontent.com/irfanhadiProject/sentosa-atk-inventory-management/refs/heads/main/update.json";
 
@@ -26,6 +27,10 @@ export default function App() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
   const appVersion = Constants.expoConfig?.version || "1.0.0";
+
+  useEffect(() => {
+    checkOTAUpdate();
+  }, []);
 
   useEffect(() => {
     const checkUpdate = async () => {
