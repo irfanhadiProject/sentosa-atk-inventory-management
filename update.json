@@ -1,7 +1,7 @@
 {
   "version": "1.2.0",
   "versionCode": 9,
-  "apkUrl": "",
+  "apkUrl": "https://github.com/irfanhadiProject/sentosa-atk-inventory-management/releases/download/v1.2.0/sentosa-v1.2.0.apk",
   "checksum": "0F7C1519363F55EAB100C44F09CD84B8",
   "mandatory": false,
   "graceDays": 3,
