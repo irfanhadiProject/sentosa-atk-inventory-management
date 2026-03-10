@@ -7,8 +7,11 @@ export const checkOTAUpdate = async () => {
     if (update.isAvailable) {
       await Updates.fetchUpdateAsync();
       await Updates.reloadAsync();
+
+      return true;
     }
-  } catch (error) {
-    console.error("OTA update Error:", error);
+  } catch (e) {
+    console.log("OTA error", e);
   }
-}
+  return false;
+};

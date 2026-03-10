@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card, Modal, Provider as PaperProvider, Portal, ProgressBar, Text } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -12,13 +12,12 @@ import InventoryScreen from './src/screens/InventoryScreen';
 import RestockScreen from './src/screens/RestockScreen';
 
 import Constants from 'expo-constants';
-import { cacheDirectory, createDownloadResumable, getContentUriAsync } from 'expo-file-system/legacy';
-import * as IntentLauncher from 'expo-intent-launcher';
-import { Alert, Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Colors } from './constants/Colors';
+import { checkAPKUpdate } from './src/services/checkUpdateService';
 import { checkOTAUpdate } from './src/services/otaUpdateService';
-
-const UPDATE_URL = "https://raw.githubusercontent.com/irfanhadiProject/sentosa-atk-inventory-management/refs/heads/main/update.json";
+import { runAPKUpdate } from './src/services/updateService';
+import { isMandatoryExpired } from './src/utils/mandatoryUpdateCheck';
 
 const Tab = createBottomTabNavigator();
 
@@ -26,84 +25,55 @@ export default function App() {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [pendingUpdate, setPendingUpdate] = useState(null);
   const appVersion = Constants.expoConfig?.version || "1.0.0";
+  const updateChecked = useRef(false);
 
   useEffect(() => {
-    checkOTAUpdate();
+    if (updateChecked.current) return;
+    
+    updateChecked.current = true;
+    initializeUpdate();
   }, []);
 
-  useEffect(() => {
-    const checkUpdate = async () => {
-      try {
-        const response = await fetch(UPDATE_URL);
-        const data = await response.json();
-        const currentVersion = Constants.expoConfig.version;
+  const initializeUpdate = async () => {
+    const otaApplied = await checkOTAUpdate();
 
-        if (data.version !== currentVersion) {
-          Alert.alert(
-            "Update Tersedia",
-            "Aplikasi Sentosa ATK ada versi baru. Download sekarang?",
-            [
-              { text: "Nanti", style: "cancel" },
-              { text: "Update", onPress: () => downloadAndInstall(data.apkUrl) }
-            ]
-          );
-        }
-      } catch (e) {
-        console.log("Cek update gagal:", e);
+    if (otaApplied) return;
+  
+    const update = await checkAPKUpdate();
+  
+    if (!update) return;
+
+    if (update.mandatory) {
+      const expired = await isMandatoryExpired(
+        update.version,
+        update.graceDays || 3
+      );
+
+      if (expired) {
+        setIsDownloading(true);
+        await runAPKUpdate(update, setDownloadProgress, setIsPreparing);
+        return;
       }
-    };
-
-    checkUpdate();
-  }, []);
-
-  const downloadAndInstall = async (url) => {
-    if (!url) {
-      Alert.alert("Error", "Link download tidak ditemukan di server.");
-      return;
     }
 
-    const fileUri = cacheDirectory + "SentosaATK_Update.apk";
-    setIsDownloading(true)
-    setIsPreparing(false);
-    setDownloadProgress(0);
+    setPendingUpdate(update);
+    setShowUpdateModal(true);
+  };
 
-    try {
-      const callback = (downloadProgress) => {
-        const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
-        setDownloadProgress(progress);
-      };
+  const startUpdate = async () => {
+    if(!pendingUpdate) return;
 
-      const downloadResumable = createDownloadResumable(url, fileUri, {}, callback);
-      const result = await downloadResumable.downloadAsync();
+    setShowUpdateModal(false);
+    setIsDownloading(true);
 
-      if (result && result.uri) {
-        setIsPreparing(true);
-
-        const cUri = await getContentUriAsync(result.uri);
-
-        if (Platform.OS === 'android') {
-          await new Promise(resolve => setTimeout(resolve, 1500));
-
-          await IntentLauncher.startActivityAsync('android.intent.action.INSTALL_PACKAGE', {
-            data: cUri,
-            flags: 3, 
-            type: 'application/vnd.android.package-archive',
-          });
-        }
-
-        setTimeout(() => {
-          setIsDownloading(false);
-          setIsPreparing(false);
-        }, 3000);
-      }
-    } catch (e) {
-      setIsDownloading(false);
-      setIsPreparing(false);
-
-      console.error(e);
-      Alert.alert("Gagal", e.toString());
-    }
+    await runAPKUpdate(
+      pendingUpdate,
+      setDownloadProgress,
+      setIsPreparing
+    );
   };
 
   return (
@@ -111,6 +81,46 @@ export default function App() {
       <PaperProvider>
         <CartProvider>
           <Portal>
+            <Modal
+              visible={showUpdateModal}
+              dismissable={false}
+              contentContainerStyle={styles.modalContainer}
+            >
+              <Card style={styles.card}>
+                <Card.Content>
+
+                  <Text variant="titleMedium" style={styles.title}>
+                    Update tersedia
+                  </Text>
+
+                  <Text style={styles.subtitle}>
+                    {pendingUpdate?.releaseNotes || "Versi baru tersedia"}
+                  </Text>
+
+                  <View style={{ 
+                    flexDirection: "row", 
+                    justifyContent: "flex-end", 
+                    marginTop: 20 
+                  }}>
+                    <Text
+                      style={{ marginRight: 20 }}
+                      onPress={() => setShowUpdateModal(false)}
+                    >
+                      Nanti
+                    </Text>
+
+                    <Text
+                      style={{ color: Colors.light.primary }}
+                      onPress={startUpdate}
+                    >
+                      Update
+                    </Text>
+                  </View>
+
+                </Card.Content>
+              </Card>
+            </Modal>
+
             <Modal 
               visible={isDownloading} 
               dismissable={false} 

@@ -1,5 +1,9 @@
 {
   "version": "1.1.7",
   "versionCode": 8,
-  "apkUrl": "https://github.com/irfanhadiProject/sentosa-atk-inventory-management/releases/download/v1.1.7/sentosa-atk.apk"
+  "apkUrl": "https://github.com/irfanhadiProject/sentosa-atk-inventory-management/releases/download/v1.1.7/sentosa-atk.apk",
+  "checksum": "71907670449594daaf402958de4fb3c1",
+  "mandatory": false,
+  "graceDays": 3,
+  "releaseNotes": "Perbaikan offline kasir"
 }
