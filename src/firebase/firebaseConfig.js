@@ -104,7 +104,9 @@ export const saveProduct = async (barcode, newData) => {
       }, { merge: true });
 
       if (diff !== 0) {
-        transaction.update(statsRef, { total_asset_value: currentTotal + diff}, { merge: true });
+        transaction.update(statsRef, { 
+          total_asset_value: currentTotal + diff 
+        });
       }
     });
   } catch (error) {
@@ -150,7 +152,10 @@ export const restockProduct = async (barcode, qty) => {
       const valueAddition = price * qty;
       const currentTotal = statsSnap.exists() ? statsSnap.data().total_asset_value : 0;
 
-      transaction.update(docRef, { stock: firestore.FieldValue.increment(qty) });
+      transaction.update(docRef, { 
+        stock: firestore.FieldValue.increment(qty) 
+      });
+      
       transaction.set(statsRef, { 
         total_asset_value: currentTotal + valueAddition 
       }, { merge: true });
