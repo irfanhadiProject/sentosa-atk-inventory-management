@@ -38,6 +38,7 @@ export const runAPKUpdate = async (
 
       if (existing.exists) {
         setPreparing?.(true);
+        await new Promise(resolve => setTimeout(resolve, 500));
         await AsyncStorage.setItem(STORAGE_HIGHEST, updateData.version);
         await installAPK(uri);
         return;
@@ -75,10 +76,13 @@ export const runAPKUpdate = async (
       }
     }
 
-    await AsyncStorage.setItem(STORAGE_HIGHEST, updateData.version); await AsyncStorage.setItem(STORAGE_DOWNLOADED, updateData.version);
     setPreparing?.(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
     await logUpdate(updateData.version);
     await installAPK(uri);
+
+    await AsyncStorage.setItem(STORAGE_HIGHEST, updateData.version); 
+    await AsyncStorage.setItem(STORAGE_DOWNLOADED, updateData.version);
   } catch (err) {
     console.error("update failed", err);
     setPreparing?.(false);
