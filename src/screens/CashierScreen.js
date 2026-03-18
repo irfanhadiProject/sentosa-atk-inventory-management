@@ -28,6 +28,7 @@ import { sharedStyles } from '../styles/sharedStyles';
 
 export default function CashierScreen() {
   const isFocused = useIsFocused();
+
   const [cameraActive, setCameraActive] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
@@ -35,8 +36,11 @@ export default function CashierScreen() {
   const [mode, setMode] = useState('cashier');
   const [showCheckModal, setShowCheckModal] = useState(false);
   const [tempProduct, setTempProduct] = useState(null);
+  const [lastScanned, setLastScanned] = useState(null);
+
   const { cart, addToCart, updateQty, manualQty, removeFromCart, clearCart, totalPrice } = useCart();
 
+  // Activate or deactivate camera based on focused state
   useEffect(() => {
     let timeout;
     if (isFocused) {
@@ -49,6 +53,7 @@ export default function CashierScreen() {
     return () => clearTimeout(timeout);
   }, [isFocused]);
 
+  // Camera permission button
   if (!permission?.granted) {
     return (
       <View style={styles.centerContainer}>
@@ -60,14 +65,20 @@ export default function CashierScreen() {
     );
   }
 
+  // Scan barcode function
   const handleScan = async ({ data }) => {
-    if (scanned || loading) return;
+    // Prevent scanning item while loading, already scanning, or scanning the same item
+    if (scanned || loading || data === lastScanned) return;
+
     setScanned(true);
     setLoading(true);
+    setLastScanned(data);
 
     try {
       const result = await getProductByBarcode(data);
+
       if (result) {
+        // Cashier mode, add item to cart
         if (mode === 'cashier') {
           addToCart({ 
             barcode: data, 
@@ -77,6 +88,7 @@ export default function CashierScreen() {
             wholesale_qty: result.wholesale_qty
           });
         } else {
+          // Check item mode, show modal window
           setTempProduct({ 
             ...result, 
             barcode: data,
@@ -92,23 +104,29 @@ export default function CashierScreen() {
       console.error(e);
       Alert.alert("Error", "Gagal ambil data.");
     } finally {
+      // Reset loading, scanned, lastScanned state
       setLoading(false);
-      if (mode === 'cashier') {
-        setTimeout(() => setScanned(false), 1200);
-      }
+      setScanned(false);
+      setLastScanned(null);
     }
   };
 
+  // Function to reset modal state
   const closeCheckModal = () => {
     setShowCheckModal(false);
     setTempProduct(null);
+    setLastScanned(null);
     setScanned(false);
   };
 
+  // Checkout function
   const handleCheckout = async () => {
     setLoading(true);
+    
     try {
-      await Promise.all(cart.map(item => updateProductStock(item.barcode, item.qty)));
+      await Promise.all(
+        cart.map(item => updateProductStock(item.barcode, item.qty))
+      );
       Alert.alert("Sukses", "Transaksi Berhasil!");
       clearCart();
     } catch (e) {
