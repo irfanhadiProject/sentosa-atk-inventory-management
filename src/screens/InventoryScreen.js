@@ -13,6 +13,7 @@ const ANNUAL_NISAB = 85 * GOLD_PRICES_PER_GRAM;
 
 export default function InventoryScreen() {
   const isFocused = useIsFocused();
+
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
@@ -21,6 +22,7 @@ export default function InventoryScreen() {
   const [globalAsset, setGlobalAsset] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [zakatAmount, setZakatAmount] = useState(0);
+  
   const isReachedNisab = globalAsset >= ANNUAL_NISAB;
   
   const [form, setForm] = useState({

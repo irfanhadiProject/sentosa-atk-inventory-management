@@ -2,7 +2,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, StyleSheet, TextInput as TextInputRN, View } from "react-native";
-import { ActivityIndicator, Button, Card, IconButton, List, Text } from "react-native-paper";
+import { ActivityIndicator, Button, Card, IconButton, List, Snackbar, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from '../../constants/Colors';
 import { getProductByBarcode, restockProduct } from "../firebase/firebaseConfig";
@@ -10,11 +10,14 @@ import { sharedStyles } from '../styles/sharedStyles';
 
 export default function RestockScreen() {
   const isFocused = useIsFocused();
+
   const [cameraActive, setCameraActive] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
   const [restockList, setRestockList] = useState([]);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackMsg, setSnackMsg] = useState('');
 
   useEffect(() => {
     let timeout;
@@ -25,6 +28,7 @@ export default function RestockScreen() {
     } else {
       setCameraActive(false);
     }
+
     return () => clearTimeout(timeout);
   }, [isFocused]);
 
@@ -46,8 +50,15 @@ export default function RestockScreen() {
     );
   }
 
+   // Snackbar helper function
+   const showToast = (message) => {
+    setSnackMsg(message);
+    setSnackbarVisible(true);
+  };
+
   const handleScan = async ({ data }) => {
     if (scanned || loading) return;
+
     setScanned(true);
     setLoading(true);
 
@@ -56,19 +67,21 @@ export default function RestockScreen() {
       if (result) {
         setRestockList(prev => {
           const existing = prev.find(item => item.barcode === data);
+
           if (existing) {
             return prev.map(item =>
               item.barcode === data ? { ...item, qty: item.qty + 1 } : item
             );
           }
+          
           return [...prev, { barcode: data, name: result.name, qty: 1 }];
         });
       } else {
-        Alert.alert("Error", "Barang baru? Silakan daftar di Master Data.");
+        showToast("Barang baru? Tambahkan barang di menu produk.");
       }
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Gagal koneksi ke Database.");
+      showToast("Gagal koneksi ke Database.");
     } finally {
       setLoading(false);
       setTimeout(() => setScanned(false), 1500);
@@ -89,7 +102,7 @@ export default function RestockScreen() {
 
     try {
       await Promise.all(restockList.map(item => restockProduct(item.barcode, item.qty)));
-      Alert.alert("Berhasil", "Stok gudang telah diperbarui!");
+      showToast("Stok gudang telah diperbarui!");
       setRestockList([]);
     } catch (e) {
       console.error(e);
@@ -200,6 +213,19 @@ export default function RestockScreen() {
           KONFIRMASI STOK MASUK
         </Button>
       </Card>
+
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={2500}
+        wrapperStyle={{ bottom: 80 }}
+        action={{ 
+          label: 'OK', 
+          onPress: () => setSnackbarVisible(false) 
+        }}
+      >
+        {snackMsg}
+      </Snackbar>
     </SafeAreaView>
   );
 }

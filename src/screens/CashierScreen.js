@@ -1,6 +1,6 @@
 import { useIsFocused } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -18,6 +18,7 @@ import {
   Modal,
   Portal,
   SegmentedButtons,
+  Snackbar,
   Text
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,12 +32,16 @@ export default function CashierScreen() {
 
   const [cameraActive, setCameraActive] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
-  const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('cashier');
   const [showCheckModal, setShowCheckModal] = useState(false);
   const [tempProduct, setTempProduct] = useState(null);
-  const [lastScanned, setLastScanned] = useState(null);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackMsg, setSnackMsg] = useState('');
+
+  const stateRef = useRef("IDLE");
+  const lastScannedRef = useRef(null);
+  const cooldownRef = useRef(null);
 
   const { cart, addToCart, updateQty, manualQty, removeFromCart, clearCart, totalPrice } = useCart();
 
@@ -65,49 +70,106 @@ export default function CashierScreen() {
     );
   }
 
+  // Snackbar helper function
+  const showToast = (message) => {
+    setSnackbarVisible(false);
+
+    requestAnimationFrame(() => {
+      setSnackMsg(message);
+      setSnackbarVisible(true);
+    });
+  };
+
   // Scan barcode function
   const handleScan = async ({ data }) => {
     // Prevent scanning item while loading, already scanning, or scanning the same item
-    if (scanned || loading || data === lastScanned) return;
+    if (stateRef.current !== "IDLE") return;
+    if (lastScannedRef.current === data) return;
 
-    setScanned(true);
+    let outcome = "UNKNOWN";
+    stateRef.current = "PROCESSING";
+    lastScannedRef.current = data;
+
     setLoading(true);
-    setLastScanned(data);
 
     try {
       const result = await getProductByBarcode(data);
 
-      if (result) {
+      if (!result) {
+        showToast("Barang tidak ditemukan!");
+        outcome = "NOT_FOUND";
+      } else if (mode === 'cashier') {
         // Cashier mode, add item to cart
-        if (mode === 'cashier') {
-          addToCart({ 
-            barcode: data, 
-            name: result.name, 
-            price_sell: result.price_sell,
-            price_wholesale: result.price_wholesale,
-            wholesale_qty: result.wholesale_qty
-          });
-        } else {
-          // Check item mode, show modal window
-          setTempProduct({ 
-            ...result, 
-            barcode: data,
-            price_sell: result.price_sell || 0,
-            stock: result.stock || 0
-          });
-          setShowCheckModal(true);
-        }
+        addToCart({ 
+          barcode: data, 
+          name: result.name, 
+          price_sell: result.price_sell,
+          price_wholesale: result.price_wholesale,
+          wholesale_qty: result.wholesale_qty
+        });
+        outcome = "SUCCESS_CASHIER";
       } else {
-        Alert.alert("Error", "Barang tidak ditemukan!");
+        // Check item mode, show modal window
+        setTempProduct({ 
+          ...result, 
+          barcode: data,
+          price_sell: result.price_sell || 0,
+          stock: result.stock || 0
+        });
+        setShowCheckModal(true);
+        outcome = "SUCCESS_CHECK";
       }
+     
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Gagal ambil data.");
+      showToast("Gagal ambil data.");
+      outcome = "ERROR";
     } finally {
       // Reset loading, scanned, lastScanned state
       setLoading(false);
-      setScanned(false);
-      setLastScanned(null);
+      
+      switch (outcome) {
+        case "SUCCESS_CASHIER":
+          stateRef.current = "COOLDOWN";
+    
+          if (cooldownRef.current) {
+            clearTimeout(cooldownRef.current);
+          }
+    
+          cooldownRef.current = setTimeout(() => {
+            stateRef.current = "IDLE";
+            lastScannedRef.current = null;
+          }, 1000);
+          break;
+    
+        case "SUCCESS_CHECK":
+          stateRef.current = "BLOCKED_BY_MODAL";
+          break;
+    
+        case "NOT_FOUND":
+          stateRef.current = "IDLE";
+
+          setTimeout(() => {
+            lastScannedRef.current = null;
+          }, 2000);
+          break;
+
+        case "ERROR":
+          stateRef.current = "IDLE";
+
+          setTimeout(() => {
+            lastScannedRef.current = null;
+          }, 2000);
+          break;
+
+        default:
+          stateRef.current = "IDLE";
+
+          setTimeout(() => {
+            lastScannedRef.current = null;
+          }, 2000);
+          break;
+      }
     }
   };
 
@@ -115,8 +177,9 @@ export default function CashierScreen() {
   const closeCheckModal = () => {
     setShowCheckModal(false);
     setTempProduct(null);
-    setLastScanned(null);
-    setScanned(false);
+    
+    stateRef.current = "IDLE";
+    lastScannedRef.current = null;
   };
 
   // Checkout function
@@ -127,7 +190,7 @@ export default function CashierScreen() {
       await Promise.all(
         cart.map(item => updateProductStock(item.barcode, item.qty))
       );
-      Alert.alert("Sukses", "Transaksi Berhasil!");
+      showToast("Transaksi Berhasil!");
       clearCart();
     } catch (e) {
       console.error(e);
@@ -168,7 +231,7 @@ export default function CashierScreen() {
         {cameraActive && isFocused ? (
           <CameraView 
             key={`camera-${mode}-${isFocused}`}
-            onBarcodeScanned={(scanned || loading) ? undefined : handleScan} 
+            onBarcodeScanned={handleScan} 
             style={StyleSheet.absoluteFillObject} 
             facing="back"
           />
@@ -304,6 +367,19 @@ export default function CashierScreen() {
           </Button>
         </Card.Content>
       </Card>
+
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={2500}
+        wrapperStyle={{ bottom: 80 }}
+        action={{ 
+          label: 'OK', 
+          onPress: () => setSnackbarVisible(false) 
+        }}
+      >
+        {snackMsg}
+      </Snackbar>
     </SafeAreaView>
   );
 }
