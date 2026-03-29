@@ -1,9 +1,9 @@
 {
-  "version": "1.2.2",
-  "versionCode": 11,
-  "apkUrl": "https://github.com/irfanhadiProject/sentosa-atk-inventory-management/releases/download/v1.2.2/sentosa-v1.2.2.apk",
-  "checksum": "c32715779193ce7799b88b5700231590",
+  "version": "1.3.0",
+  "versionCode": 12,
+  "apkUrl": "https://github.com/irfanhadiProject/sentosa-atk-inventory-management/releases/download/v1.3.0/sentosa-v1.3.0.apk",
+  "checksum": "ab438bdd182a6bdb528895fb975fce3a",
   "mandatory": true,
   "graceDays": 3,
-  "releaseNotes": "Perbaikan Add New Item dan Restock Item"
+  "releaseNotes": "Menerapkan toast untuk notifikasi error"
 }
