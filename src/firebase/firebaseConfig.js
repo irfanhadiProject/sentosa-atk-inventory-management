@@ -182,3 +182,20 @@ export const getZakatReport = async () => {
   }
   return { totalAsset: 0, zakatAmount: 0 };
 };
+
+// search products by name
+export const searchProductsByName = async (keyword) => {
+  const db = getDb();
+
+  const snapshot = await db.collection('products')
+    .orderBy('name_lowercase')
+    .startAt(keyword)
+    .endAt(keyword + '\uf8ff')
+    .limit(10)
+    .get();
+
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+}

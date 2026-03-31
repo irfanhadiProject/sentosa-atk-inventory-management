@@ -5,6 +5,7 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } f
 import { ActivityIndicator, Button, Card, Divider, FAB, Snackbar, Text, TextInput } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
+import SearchProduct from '../components/SearchProduct';
 import { generateSKU, getProductByBarcode, getZakatReport, saveProduct, syncInitialAssetValue } from '../firebase/firebaseConfig';
 import { sharedStyles } from '../styles/sharedStyles';
 
@@ -22,6 +23,7 @@ export default function InventoryScreen() {
   const [globalAsset, setGlobalAsset] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [zakatAmount, setZakatAmount] = useState(0);
+  const [isSearching, setIsSearching] = useState(false);
   
   const isReachedNisab = globalAsset >= ANNUAL_NISAB;
   
@@ -233,7 +235,8 @@ export default function InventoryScreen() {
           <ScrollView
             showsVerticalScrollIndicator={false}
             bounces={false}
-            style={{ padding: 20 }}
+            scrollEnabled={!isSearching}
+            contentContainerStyle={{ padding: 20, flexGrow: 1 }}
             keyboardShouldPersistTaps="handled"
           >
             <Text variant="titleLarge" style={styles.formTitle}>Detail Produk</Text>
@@ -268,6 +271,31 @@ export default function InventoryScreen() {
                 </Button>
               </View>
             )}
+
+            <SearchProduct
+              placeholder="Cari produk jika barcode tidak terbaca..."
+              onSelect={(item) => {
+                setForm({
+                  barcode: item.id,
+                  name: item.name || '',
+                  category: item.category || '',
+                  brand: item.brand || '',
+                  sku: item.sku || '',
+                  price_buy: item.price_buy?.toString() || '',
+                  price_sell: item.price_sell?.toString() || '',
+                  price_wholesale: item.price_wholesale?.toString() || '',
+                  wholesale_qty: item.wholesale_qty?.toString() || '',
+                  stock: item.stock?.toString() || '',
+                });
+
+                setIsScanning(false);
+              }}
+              onFocus={() => {
+                setIsScanning(false);
+                setIsSearching(true);
+              }}
+              onBlur={() => setIsSearching(false)}
+            />
 
             <View>
               <View style={styles.barcodeRow}>
