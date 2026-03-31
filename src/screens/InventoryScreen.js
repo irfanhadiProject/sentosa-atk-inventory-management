@@ -2,11 +2,11 @@ import { useIsFocused } from '@react-navigation/native';
 import { CameraView } from 'expo-camera';
 import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Button, Card, Divider, FAB, Snackbar, Text, TextInput } from 'react-native-paper';
+import { ActivityIndicator, Button, Card, Divider, FAB, List, Snackbar, Text, TextInput } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
 import SearchProduct from '../components/SearchProduct';
-import { generateSKU, getProductByBarcode, getZakatReport, saveProduct, syncInitialAssetValue } from '../firebase/firebaseConfig';
+import { generateSKU, getLowStockProducts, getProductByBarcode, getZakatReport, saveProduct, syncInitialAssetValue } from '../firebase/firebaseConfig';
 import { sharedStyles } from '../styles/sharedStyles';
 
 const GOLD_PRICES_PER_GRAM = 3135000;
@@ -24,6 +24,8 @@ export default function InventoryScreen() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [zakatAmount, setZakatAmount] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
+  const [lowStockItems, setLowStockItems] = useState([]);
+  const [isScrollingLowStock, setIsScrollingLowStock] = useState(false);
   
   const isReachedNisab = globalAsset >= ANNUAL_NISAB;
   
@@ -41,18 +43,18 @@ export default function InventoryScreen() {
   });
 
   useEffect(() => {
-    if (!isFocused) {
-      setIsScanning(false);
-    }
-  }, [isFocused]);
-
-  useEffect(() => {
     const fetchInitialReport = async () => {
       const report = await getZakatReport();
       setGlobalAsset(report.totalAsset);
       setZakatAmount(report.zakatAmount);
     };
-    if (isFocused) fetchInitialReport();
+
+    if (isFocused) {
+      fetchInitialReport();
+      fetchLowStock();
+    } else {
+      setIsScanning(false);
+    };
   }, [isFocused]);
 
   useEffect(() => {
@@ -140,6 +142,15 @@ export default function InventoryScreen() {
     } finally {
       setLoading(false);
       setIsScanning(false);
+    }
+  };
+
+  const fetchLowStock = async () => {
+    try {
+      const items = await getLowStockProducts(); // kamu buat ini
+      setLowStockItems(items);
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -476,7 +487,10 @@ export default function InventoryScreen() {
         Inventory Management
       </Text>
       
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
+      <ScrollView 
+        contentContainerStyle={{ padding: 20 }}
+        scrollEnabled={!isScrollingLowStock}
+      >
         <Card style={[styles.cardBase, { backgroundColor: Colors.light.infoCard }]}>
           <Card.Content>
             <View style={styles.flexRowBetween}>
@@ -548,6 +562,100 @@ export default function InventoryScreen() {
                 )}
               </View>
             </View>
+          </Card.Content>
+        </Card>
+
+        <Card style={[
+          styles.cardBase,
+          {
+            backgroundColor: Colors.light.surface,
+            borderLeftWidth: 5,
+            borderLeftColor: Colors.light.warning
+          }
+        ]}>
+          <Card.Content>
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 10
+            }}>
+              <Text 
+                variant="titleMedium" 
+                style={{ 
+                  fontWeight: 'bold', 
+                  color: Colors.light.text,
+                  marginBottom: 10,
+                }}
+              >
+                Stok Menipis
+              </Text>
+  
+              <Text style={{ 
+                color: Colors.light.warning,
+                fontWeight: 'bold'
+              }}>
+                {lowStockItems.length} item
+              </Text>
+            </View>
+
+            {lowStockItems.length === 0 ? (
+              <Text style={{ color: Colors.light.subtext }}>
+                Tidak ada stok kritis
+              </Text>
+            ) : (
+              <View style={styles.lowStockContainer}>
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  onTouchStart={() => setIsScrollingLowStock(true)}
+                  onTouchEnd={() => setIsScrollingLowStock(false)}
+                  onMomentumScrollEnd={() => setIsScrollingLowStock(false)}
+                >
+                  {lowStockItems.map(item => {
+                    const isCritical = item.stock <= 2;
+
+                    return (
+                      <List.Item
+                        key={item.id}
+                        title={item.name}
+                        titleStyle={{ 
+                          color: Colors.light.text,
+                          fontWeight: '600'
+                        }}
+                        description={`Sisa: ${item.stock} pcs`}
+                        descriptionStyle={{ 
+                          color: isCritical 
+                            ? Colors.light.danger 
+                            : Colors.light.warning,
+                          fontWeight: 'bold'
+                        }}
+                        left={() => (
+                          <List.Icon 
+                            icon="alert-circle"
+                            color={
+                              isCritical 
+                                ? Colors.light.danger 
+                                : Colors.light.warning
+                            }
+                          />
+                        )}
+                        style={{
+                          backgroundColor: Colors.light.surface,
+                          borderRadius: 8,
+                          padding: 10,
+                          marginBottom: 6,
+                          elevation: 1,
+                          borderWidth: 1,
+                          borderColor: isCritical
+                          ? Colors.light.danger
+                          : Colors.light.warning
+                        }}
+                      />
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
           </Card.Content>
         </Card>
 
@@ -660,5 +768,8 @@ const styles = StyleSheet.create({
     right: 0, 
     bottom: 0, 
     backgroundColor: Colors.light.secondary,
+  },
+  lowStockContainer: {
+    maxHeight: 300,
   }
 });
