@@ -98,10 +98,15 @@ export const saveProduct = async (barcode, newData) => {
 
       const currentTotal = statsSnap.exists() ? statsSnap.data().total_asset_value : 0;
 
-      transaction.set(docRef, {
+      const updatedData = {
         ...newData,
+        ...(newData.name !== undefined && {
+          name_lowercase: newData.name.toLowerCase()
+        }),
         updatedAt: firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+      }
+
+      transaction.set(docRef, updatedData, { merge: true });
 
       if (diff !== 0) {
         transaction.update(statsRef, { 
