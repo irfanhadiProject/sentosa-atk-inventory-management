@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Keyboard,
+  Pressable,
   ScrollView,
   StyleSheet,
   TextInput as TextInputRN,
-  TouchableWithoutFeedback,
   View
 } from 'react-native';
 import {
@@ -66,8 +66,22 @@ export default function CashierScreen() {
   if (!permission?.granted) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={{ color: Colors.light.text, marginBottom: 20, fontSize: 18 }}>Izin kamera diperlukan</Text>
-        <Button mode="contained" onPress={requestPermission} buttonColor={Colors.light.primary} textColor={Colors.light.background}>
+        <Text 
+          style={{ 
+            color: Colors.light.text, 
+            marginBottom: 
+            20, fontSize: 18 
+          }}
+        >
+          Izin kamera diperlukan
+        </Text>
+
+        <Button 
+          mode="contained" 
+          onPress={requestPermission} 
+          buttonColor={Colors.light.primary} 
+          textColor={Colors.light.background}
+        >
           Beri Izin
         </Button>
       </View>
@@ -199,204 +213,201 @@ export default function CashierScreen() {
   };
 
   return (
-    <TouchableWithoutFeedback 
-      onPress={() => {
-        Keyboard.dismiss();
-        setIsSearching(false);
-      }}
-    >
-      <View style={{ flex: 1}}>
-        <SafeAreaView style={sharedStyles.container}>
+    <View style={{ flex: 1}}>
+      <SafeAreaView style={sharedStyles.container}>
+        <Pressable onPress={Keyboard.dismiss}>
           <Text variant="headlineSmall" style={sharedStyles.title}>Sentosa Kasir</Text>
-    
-          <View style={styles.segmentedWrapper}>
-            <SegmentedButtons 
-              value={mode}
-              onValueChange={(val) => {
-                setCameraActive(false);
-                setMode(val);
-                setTimeout(() => setCameraActive(true), 150);
-              }}
-              buttons={[
-                { value: 'cashier', label: 'Mode Kasir', icon: 'cart' },
-                { value: 'check', label: 'Cek Stok/Harga', icon: 'magnify' }
-              ]}
-              theme={{
-                colors: {
-                  secondaryContainer: Colors.light.primary,
-                  onSecondaryContainer: Colors.light.surface,
-                  onSurface: Colors.light.text,
-                  outline: Colors.light.border,
-                }
-              }}
+        </Pressable>
+
+        <View style={styles.segmentedWrapper}>
+          <SegmentedButtons 
+            value={mode}
+            onValueChange={(val) => {
+              setCameraActive(false);
+              setMode(val);
+              setTimeout(() => setCameraActive(true), 150);
+            }}
+            buttons={[
+              { value: 'cashier', label: 'Mode Kasir', icon: 'cart' },
+              { value: 'check', label: 'Cek Stok/Harga', icon: 'magnify' }
+            ]}
+            theme={{
+              colors: {
+                secondaryContainer: Colors.light.primary,
+                onSecondaryContainer: Colors.light.surface,
+                onSurface: Colors.light.text,
+                outline: Colors.light.border,
+              }
+            }}
+          />
+  
+          <SearchProduct
+            placeholder="Cari nama barang..."
+            onSelect={(item) => {
+              handleSelectProduct(item, item.id);
+            }}
+            onFocus={() => setIsSearching(true)}
+            onBlur={() => setIsSearching(false)}
+          />
+        </View>
+        
+        <View style={sharedStyles.cameraWrapper}>
+          {cameraActive && isFocused ? (
+            <CameraView 
+              key={`camera-${mode}-${isFocused}`}
+              onBarcodeScanned={handleScan} 
+              style={StyleSheet.absoluteFillObject} 
+              facing="back"
             />
-    
-            <SearchProduct
-              placeholder="Cari nama barang..."
-              onSelect={(item) => {
-                handleSelectProduct(item, item.id);
-              }}
-              onFocus={() => setIsSearching(true)}
-              onBlur={() => setIsSearching(false)}
-            />
-          </View>
-          
-          <View style={sharedStyles.cameraWrapper}>
-            {cameraActive && isFocused ? (
-              <CameraView 
-                key={`camera-${mode}-${isFocused}`}
-                onBarcodeScanned={handleScan} 
-                style={StyleSheet.absoluteFillObject} 
-                facing="back"
-              />
-            ) : (
-              <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000' }]}/>
-            )}
-    
-            {loading && (
-              <View style={[StyleSheet.absoluteFillObject, sharedStyles.cameraLoadingOverlay]}>
-                <ActivityIndicator animating={true} color={Colors.light.primary} size="large" />
-                <Text style={sharedStyles.loadingText}>Mengambil Data...</Text>
+          ) : (
+            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000' }]}/>
+          )}
+  
+          {loading && (
+            <View style={[StyleSheet.absoluteFillObject, sharedStyles.cameraLoadingOverlay]}>
+              <ActivityIndicator animating={true} color={Colors.light.primary} size="large" />
+              <Text style={sharedStyles.loadingText}>Mengambil Data...</Text>
+            </View>
+          )}
+        </View>
+        
+        <Portal>
+          <Modal 
+            visible={showCheckModal} 
+            onDismiss={closeCheckModal} 
+            contentContainerStyle={styles.modalContent}
+          >
+            {tempProduct && (
+              <View>
+                <Text variant="titleLarge" style={styles.modalTitle}>
+                  {tempProduct.name}
+                </Text>
+                <Divider style={styles.divider} />
+                <Text variant="bodyLarge" style={styles.infoText}>
+                  Harga Jual: <Text style={styles.boldText}>Rp {tempProduct.price_sell?.toLocaleString('id-ID')}</Text>   
+                </Text>
+                <Text variant="bodyLarge" style={styles.infoText}>
+                  Stok Saat Ini: <Text style={styles.boldText}>{tempProduct.stock} pcs</Text>
+                </Text>
+                <Text variant="bodySmall" style={styles.barcodeText}>
+                  Barcode: {tempProduct.barcode}
+                </Text>
+                <Button 
+                  mode="contained" 
+                  onPress={closeCheckModal} 
+                  style={{ marginTop: 20 }}
+                  buttonColor={Colors.light.primary}
+                  textColor={Colors.light.background}
+                >
+                  Tutup
+                </Button>
               </View>
             )}
-          </View>
-    
-          <Portal>
-            <Modal 
-              visible={showCheckModal} 
-              onDismiss={closeCheckModal} 
-              contentContainerStyle={styles.modalContent}
-            >
-              {tempProduct && (
-                <View>
-                  <Text variant="titleLarge" style={styles.modalTitle}>
-                    {tempProduct.name}
-                  </Text>
-                  <Divider style={styles.divider} />
-                  <Text variant="bodyLarge" style={styles.infoText}>
-                    Harga Jual: <Text style={styles.boldText}>Rp {tempProduct.price_sell?.toLocaleString('id-ID')}</Text>   
-                  </Text>
-                  <Text variant="bodyLarge" style={styles.infoText}>
-                    Stok Saat Ini: <Text style={styles.boldText}>{tempProduct.stock} pcs</Text>
-                  </Text>
-                  <Text variant="bodySmall" style={styles.barcodeText}>
-                    Barcode: {tempProduct.barcode}
-                  </Text>
-                  <Button 
-                    mode="contained" 
-                    onPress={closeCheckModal} 
-                    style={{ marginTop: 20 }}
-                    buttonColor={Colors.light.primary}
-                    textColor={Colors.light.background}
-                  >
-                    Tutup
-                  </Button>
-                </View>
-              )}
-            </Modal>
-          </Portal>
-    
-          <View style={styles.cartArea}>
-            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              {cart.map((item) => (
-                <List.Item
-                  key={item.barcode}
-                  title={item.name}
-                  titleStyle={styles.cartTitle}
-                  description={() => {
-                    const qty = item.qty || 0;
-                    const wholesaleQty = item.wholesale_qty || 0;
-    
-                    if (item.price_wholesale > 0 && wholesaleQty > 0 && qty >= wholesaleQty) {
-                      const packages = Math.floor(qty/wholesaleQty);
-                      const units = qty % wholesaleQty;
-                      return (
-                        <Text style={{ color: Colors.light.success }}>
-                          {packages} Grosir + {units} Ecer {'\n'}
-                          <Text style={{ color: Colors.light.subtext, fontWeight:'bold' }}>
-                            Total: Rp {((packages * item.price_wholesale) + (units * item.price_sell)).toLocaleString('id-ID')}
-                          </Text>
+          </Modal>
+        </Portal>
+
+        <View style={styles.cartArea}>
+          <ScrollView 
+            keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
+          >
+            {cart.map((item) => (
+              <List.Item
+                key={item.barcode}
+                title={item.name}
+                titleStyle={styles.cartTitle}
+                description={() => {
+                  const qty = item.qty || 0;
+                  const wholesaleQty = item.wholesale_qty || 0;
+  
+                  if (item.price_wholesale > 0 && wholesaleQty > 0 && qty >= wholesaleQty) {
+                    const packages = Math.floor(qty/wholesaleQty);
+                    const units = qty % wholesaleQty;
+                    return (
+                      <Text style={{ color: Colors.light.success }}>
+                        {packages} Grosir + {units} Ecer {'\n'}
+                        <Text style={{ color: Colors.light.subtext, fontWeight:'bold' }}>
+                          Total: Rp {((packages * item.price_wholesale) + (units * item.price_sell)).toLocaleString('id-ID')}
                         </Text>
-                      );
-                    }
-                    return(
-                      <Text style={{ color: Colors.light.subtext }}>
-                        Rp {item.price_sell?.toLocaleString('id-ID')} x {qty}
                       </Text>
                     );
-                  }}
-                  right={() => (
-                    <View style={sharedStyles.rightControlWrapper}>
-                      <Button 
-                        compact mode="outlined" 
-                        onPress={() => updateQty(item.barcode, -1)} 
-                        style={sharedStyles.qtyButton}
-                        textColor={Colors.light.text}
-                        contentStyle={{ width: 35, height: 35 }}
-                      > - </Button>
-                      <TextInputRN
-                        value={item.qty.toString()}
-                        onChangeText={(t) => manualQty(item.barcode, t)}
-                        keyboardType="numeric"
-                        style={sharedStyles.inputQty}
-                      />
-                      <Button 
-                        compact mode="outlined" 
-                        onPress={() => updateQty(item.barcode, 1)} 
-                        style={sharedStyles.qtyButton}
-                        textColor={Colors.light.text}
-                        contentStyle={{ width: 35, height: 35 }}
-                      > + </Button>
-                      <IconButton
-                        icon="delete"
-                        iconColor={Colors.light.danger}
-                        size={24}
-                        onPress={() => removeFromCart(item.barcode)}
-                      />
-                    </View>
-                  )}
-                />
-              ))}
-            </ScrollView>
-          </View>
-    
-          <Card style={styles.totalCard}>
-            <Card.Content style={styles.totalContent}>
-              <View>
-                <Text variant="labelLarge" style={{ color: Colors.light.subtext }}>Total:</Text>
-                <Text variant="headlineSmall" style={styles.totalAmount}>
-                  Rp {totalPrice?.toLocaleString('id-ID')}
-                </Text>
-              </View>
-              <Button 
-                mode="contained" 
-                icon="cash-register" 
-                disabled={cart.length === 0 || loading} 
-                onPress={handleCheckout} 
-                buttonColor={Colors.light.success}
-                textColor={Colors.light.surface}
-                contentStyle={{ height: 50 }}
-              >
-                BAYAR
-              </Button>
-            </Card.Content>
-          </Card>
-    
-          <Snackbar
-            visible={snackbarVisible}
-            onDismiss={() => setSnackbarVisible(false)}
-            duration={2500}
-            wrapperStyle={{ bottom: 80 }}
-            action={{ 
-              label: 'OK', 
-              onPress: () => setSnackbarVisible(false) 
-            }}
-          >
-            {snackMsg}
-          </Snackbar>
-        </SafeAreaView>
-      </View>
-    </TouchableWithoutFeedback>
+                  }
+                  return(
+                    <Text style={{ color: Colors.light.subtext }}>
+                      Rp {item.price_sell?.toLocaleString('id-ID')} x {qty}
+                    </Text>
+                  );
+                }}
+                right={() => (
+                  <View style={sharedStyles.rightControlWrapper}>
+                    <Button 
+                      compact mode="outlined" 
+                      onPress={() => updateQty(item.barcode, -1)} 
+                      style={sharedStyles.qtyButton}
+                      textColor={Colors.light.text}
+                      contentStyle={{ width: 35, height: 35 }}
+                    > - </Button>
+                    <TextInputRN
+                      value={item.qty.toString()}
+                      onChangeText={(t) => manualQty(item.barcode, t)}
+                      keyboardType="numeric"
+                      style={sharedStyles.inputQty}
+                    />
+                    <Button 
+                      compact mode="outlined" 
+                      onPress={() => updateQty(item.barcode, 1)} 
+                      style={sharedStyles.qtyButton}
+                      textColor={Colors.light.text}
+                      contentStyle={{ width: 35, height: 35 }}
+                    > + </Button>
+                    <IconButton
+                      icon="delete"
+                      iconColor={Colors.light.danger}
+                      size={24}
+                      onPress={() => removeFromCart(item.barcode)}
+                    />
+                  </View>
+                )}
+              />
+            ))}
+          </ScrollView>
+        </View>
+  
+        <Card style={styles.totalCard}>
+          <Card.Content style={styles.totalContent}>
+            <View>
+              <Text variant="labelLarge" style={{ color: Colors.light.subtext }}>Total:</Text>
+              <Text variant="headlineSmall" style={styles.totalAmount}>
+                Rp {totalPrice?.toLocaleString('id-ID')}
+              </Text>
+            </View>
+            <Button 
+              mode="contained" 
+              icon="cash-register" 
+              disabled={cart.length === 0 || loading} 
+              onPress={handleCheckout} 
+              buttonColor={Colors.light.success}
+              textColor={Colors.light.surface}
+              contentStyle={{ height: 50 }}
+            >
+              BAYAR
+            </Button>
+          </Card.Content>
+        </Card>
+  
+        <Snackbar
+          visible={snackbarVisible}
+          onDismiss={() => setSnackbarVisible(false)}
+          duration={2500}
+          wrapperStyle={{ bottom: 80 }}
+          action={{ 
+            label: 'OK', 
+            onPress: () => setSnackbarVisible(false) 
+          }}
+        >
+          {snackMsg}
+        </Snackbar>
+      </SafeAreaView>
+    </View>
   );
 }
 

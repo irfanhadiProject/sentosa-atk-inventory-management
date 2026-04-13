@@ -23,9 +23,7 @@ export default function InventoryScreen() {
   const [globalAsset, setGlobalAsset] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [zakatAmount, setZakatAmount] = useState(0);
-  const [isSearching, setIsSearching] = useState(false);
   const [lowStockItems, setLowStockItems] = useState([]);
-  const [isScrollingLowStock, setIsScrollingLowStock] = useState(false);
   
   const isReachedNisab = globalAsset >= ANNUAL_NISAB;
   
@@ -246,7 +244,6 @@ export default function InventoryScreen() {
           <ScrollView
             showsVerticalScrollIndicator={false}
             bounces={false}
-            scrollEnabled={!isSearching}
             contentContainerStyle={{ padding: 20, flexGrow: 1 }}
             keyboardShouldPersistTaps="handled"
           >
@@ -303,9 +300,7 @@ export default function InventoryScreen() {
               }}
               onFocus={() => {
                 setIsScanning(false);
-                setIsSearching(true);
               }}
-              onBlur={() => setIsSearching(false)}
             />
 
             <View>
@@ -489,7 +484,6 @@ export default function InventoryScreen() {
       
       <ScrollView 
         contentContainerStyle={{ padding: 20 }}
-        scrollEnabled={!isScrollingLowStock}
       >
         <Card style={[styles.cardBase, { backgroundColor: Colors.light.infoCard }]}>
           <Card.Content>
@@ -607,9 +601,7 @@ export default function InventoryScreen() {
               <View style={styles.lowStockContainer}>
                 <ScrollView
                   showsVerticalScrollIndicator={false}
-                  onTouchStart={() => setIsScrollingLowStock(true)}
-                  onTouchEnd={() => setIsScrollingLowStock(false)}
-                  onMomentumScrollEnd={() => setIsScrollingLowStock(false)}
+                  nestedScrollEnabled={true}
                 >
                   {lowStockItems.map(item => {
                     const isCritical = item.stock <= 2;

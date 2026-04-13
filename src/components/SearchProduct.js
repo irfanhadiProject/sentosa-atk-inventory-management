@@ -53,7 +53,10 @@ export default function SearchProduct({ onSelect, placeholder, onFocus, onBlur }
 
       {query.length > 0 && (
         <View style={styles.overlay}>
-          <ScrollView keyboardShouldPersistTaps="handled">
+          <ScrollView 
+            keyboardShouldPersistTaps="handled" 
+            nestedScrollEnabled={true}
+          >
 
             {loading && <ActivityIndicator />}
 

@@ -1,7 +1,7 @@
 import { useIsFocused } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useEffect, useState } from "react";
-import { Alert, Keyboard, ScrollView, StyleSheet, TextInput as TextInputRN, TouchableWithoutFeedback, View } from "react-native";
+import { Alert, Keyboard, Pressable, ScrollView, StyleSheet, TextInput as TextInputRN, View } from "react-native";
 import { ActivityIndicator, Button, Card, IconButton, List, Snackbar, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from '../../constants/Colors';
@@ -33,6 +33,15 @@ export default function RestockScreen() {
 
     return () => clearTimeout(timeout);
   }, [isFocused, isSearching]);
+
+  // Set searching state based on keyboard view
+  useEffect(() => {
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setIsSearching(false);
+    })
+
+    return () => hideSub.remove();
+  }, [])
 
   if (!permission?.granted) {
     return (
@@ -115,159 +124,155 @@ export default function RestockScreen() {
   };
 
   return (
-    <TouchableWithoutFeedback
-      onPress={() => {
-        Keyboard.dismiss();
-        setIsSearching(false);
-      }}
-    >
-      <View style={{ flex:1 }}>
-        <SafeAreaView style={sharedStyles.container}>
+    <View style={{ flex:1 }}>
+      <SafeAreaView style={sharedStyles.container}>
+        <Pressable onPress={Keyboard.dismiss}>
           <Text variant="headlineSmall" style={sharedStyles.title}>
             Restock (Barang Masuk)
           </Text>
+        </Pressable>
     
-          <View style={{ paddingHorizontal: 20 }}>
-            <SearchProduct
-              placeholder="Cari barang untuk restock..."
-              onSelect={(item) => {
-                setRestockList(prev => {
-                  const existing = prev.find(i => i.barcode === item.id);
-      
-                  if (existing) {
-                    return prev.map(i =>
-                      i.barcode === item.id
-                        ? { ...i, qty: i.qty + 1 }
-                        : i
-                    );
+        <View style={{ paddingHorizontal: 20 }}>
+          <SearchProduct
+            placeholder="Cari barang untuk restock..."
+            onSelect={(item) => {
+              setRestockList(prev => {
+                const existing = prev.find(i => i.barcode === item.id);
+    
+                if (existing) {
+                  return prev.map(i =>
+                    i.barcode === item.id
+                      ? { ...i, qty: i.qty + 1 }
+                      : i
+                  );
+                }
+    
+                return [
+                  ...prev,
+                  {
+                    barcode: item.id,
+                    name: item.name,
+                    qty: 1
                   }
-      
-                  return [
-                    ...prev,
-                    {
-                      barcode: item.id,
-                      name: item.name,
-                      qty: 1
-                    }
-                  ];
-                });
-              }}
-              onFocus={() => setIsSearching(true)}
-              onBlur={() => setIsSearching(false)}
-            />
-          </View>
-    
-          <View style={sharedStyles.cameraWrapper}>
-            {cameraActive && isFocused ? (
-              <CameraView 
-                key="restock-camera-resource"
-                onBarcodeScanned={(scanned || loading) ? undefined : handleScan} 
-                style={StyleSheet.absoluteFillObject} 
-              />
-            ) : (
-              <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000' }]}/>
-            )}
-            
-            {loading && (
-              <View style={[StyleSheet.absoluteFillObject, sharedStyles.cameraLoadingOverlay]}>
-                <ActivityIndicator animating={true} color={Colors.light.primary} size="large" />
-                <Text style={sharedStyles.loadingText}>Memproses...</Text>
-              </View>
-            )}
-          </View>
-    
-          <View style={styles.listArea}>
-            <Text variant="titleSmall" style={styles.subTitle}>
-              DAFTAR BARANG MASUK:
-            </Text>
-            
-            <ScrollView 
-              keyboardShouldPersistTaps="handled" 
-              showsVerticalScrollIndicator={false}
-              style={{ marginTop: 5 }}
-            >
-              {restockList.map((item) => (
-                <List.Item
-                  key={item.barcode}
-                  title={item.name}
-                  titleStyle={styles.itemTitle}
-                  description={`Jumlah Tambahan: ${item.qty} pcs`}
-                  descriptionStyle={{ color: Colors.light.primary, fontWeight: '500' }}
-                  right={() => (
-                    <View style={sharedStyles.rightControlWrapper}>
-                      <Button 
-                        compact mode="outlined" 
-                        onPress={() => updateLocalQty(item.barcode, -1)} 
-                        style={sharedStyles.qtyButton}
-                        textColor={Colors.light.text}
-                        contentStyle={{ width: 35, height: 35 }}
-                      > - </Button>
-    
-                      <TextInputRN
-                        value={item.qty.toString()}
-                        onChangeText={(v) => { 
-                          const num = parseInt(v.replace(/[^0-9]/g, '')) || 0;
-                          setRestockList(prev => prev.map(i => i.barcode === item.barcode ? {...i, qty: num} : i));
-                        }}
-                        keyboardType="numeric"
-                        style={sharedStyles.inputQty}
-                      />
-    
-                      <Button 
-                        compact mode="outlined" 
-                        onPress={() => updateLocalQty(item.barcode, 1)} 
-                        style={sharedStyles.qtyButton}
-                        textColor={Colors.light.text}
-                        contentStyle={{ width: 35, height: 35 }}
-                      > + </Button>
-    
-                      <IconButton 
-                        icon="delete-outline"
-                        iconColor={Colors.light.danger}
-                        size={24}
-                        onPress={() => setRestockList(prev => prev.filter(i => i.barcode !== item.barcode))}
-                      />
-                    </View>
-                  )}
-                  style={styles.listItem}
-                />
-              ))}
-              {restockList.length === 0 && (
-                <Text style={styles.emptyText}>Belum ada item yang di-scan.</Text>
-              )}
-            </ScrollView>
-          </View>
-    
-          <Card style={styles.bottomCard}>
-            <Button 
-              mode="contained" 
-              icon="database-import" 
-              onPress={handleUpdateStock} 
-              disabled={restockList.length === 0 || loading}
-              style={styles.submitButton}
-              buttonColor={Colors.light.primary}
-              textColor={Colors.light.surface}
-              contentStyle={{ height: 50 }}
-            >
-              KONFIRMASI STOK MASUK
-            </Button>
-          </Card>
-    
-          <Snackbar
-            visible={snackbarVisible}
-            onDismiss={() => setSnackbarVisible(false)}
-            duration={2500}
-            wrapperStyle={{ bottom: 80 }}
-            action={{ 
-              label: 'OK', 
-              onPress: () => setSnackbarVisible(false) 
+                ];
+              });
             }}
+            onFocus={() => setIsSearching(true)}
+            onBlur={() => setIsSearching(false)}
+          />
+        </View>
+  
+        <View style={sharedStyles.cameraWrapper}>
+          {cameraActive && isFocused ? (
+            <CameraView 
+              key="restock-camera-resource"
+              onBarcodeScanned={handleScan} 
+              style={StyleSheet.absoluteFillObject} 
+            />
+          ) : (
+            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000' }]}/>
+          )}
+          
+          {loading && (
+            <View style={[StyleSheet.absoluteFillObject, sharedStyles.cameraLoadingOverlay]}>
+              <ActivityIndicator animating={true} color={Colors.light.primary} size="large" />
+              <Text style={sharedStyles.loadingText}>Memproses...</Text>
+            </View>
+          )}
+        </View>
+
+  
+        <View style={styles.listArea}>
+          <Text variant="titleSmall" style={styles.subTitle}>
+            DAFTAR BARANG MASUK:
+          </Text>
+          
+          <ScrollView 
+            keyboardShouldPersistTaps="handled" 
+            showsVerticalScrollIndicator={false}
+            style={{ marginTop: 5 }}
           >
-            {snackMsg}
-          </Snackbar>
-        </SafeAreaView>
-      </View>
-    </TouchableWithoutFeedback>
+            {restockList.map((item) => (
+              <List.Item
+                key={item.barcode}
+                title={item.name}
+                titleStyle={styles.itemTitle}
+                description={`Jumlah Tambahan: ${item.qty} pcs`}
+                descriptionStyle={{ color: Colors.light.primary, fontWeight: '500' }}
+                right={() => (
+                  <View style={sharedStyles.rightControlWrapper}>
+                    <Button 
+                      compact mode="outlined" 
+                      onPress={() => updateLocalQty(item.barcode, -1)} 
+                      style={sharedStyles.qtyButton}
+                      textColor={Colors.light.text}
+                      contentStyle={{ width: 35, height: 35 }}
+                    > - </Button>
+  
+                    <TextInputRN
+                      value={item.qty.toString()}
+                      onChangeText={(v) => { 
+                        const num = parseInt(v.replace(/[^0-9]/g, '')) || 0;
+                        setRestockList(prev => prev.map(i => i.barcode === item.barcode ? {...i, qty: num} : i));
+                      }}
+                      keyboardType="numeric"
+                      style={sharedStyles.inputQty}
+                    />
+  
+                    <Button 
+                      compact mode="outlined" 
+                      onPress={() => updateLocalQty(item.barcode, 1)} 
+                      style={sharedStyles.qtyButton}
+                      textColor={Colors.light.text}
+                      contentStyle={{ width: 35, height: 35 }}
+                    > + </Button>
+  
+                    <IconButton 
+                      icon="delete-outline"
+                      iconColor={Colors.light.danger}
+                      size={24}
+                      onPress={() => setRestockList(prev => prev.filter(i => i.barcode !== item.barcode))}
+                    />
+                  </View>
+                )}
+                style={styles.listItem}
+              />
+            ))}
+            {restockList.length === 0 && (
+              <Text style={styles.emptyText}>Belum ada item yang di-scan.</Text>
+            )}
+          </ScrollView>
+        </View>
+  
+        <Card style={styles.bottomCard}>
+          <Button 
+            mode="contained" 
+            icon="database-import" 
+            onPress={handleUpdateStock} 
+            disabled={restockList.length === 0 || loading}
+            style={styles.submitButton}
+            buttonColor={Colors.light.primary}
+            textColor={Colors.light.surface}
+            contentStyle={{ height: 50 }}
+          >
+            KONFIRMASI STOK MASUK
+          </Button>
+        </Card>
+  
+        <Snackbar
+          visible={snackbarVisible}
+          onDismiss={() => setSnackbarVisible(false)}
+          duration={2500}
+          wrapperStyle={{ bottom: 80 }}
+          action={{ 
+            label: 'OK', 
+            onPress: () => setSnackbarVisible(false) 
+          }}
+        >
+          {snackMsg}
+        </Snackbar>
+      </SafeAreaView>
+    </View>
   );
 }
 
