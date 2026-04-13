@@ -1,9 +1,9 @@
 {
-  "version": "1.4.0",
-  "versionCode": 13,
-  "apkUrl": "https://github.com/irfanhadiProject/sentosa-atk-inventory-management/releases/download/v1.4.0/sentosa-v1.4.0.apk",
-  "checksum": "8967b549510e28f39f4611db380136d4",
+  "version": "1.4.1",
+  "versionCode": 14,
+  "apkUrl": "https://github.com/irfanhadiProject/sentosa-atk-inventory-management/releases/download/v1.4.1/sentosa-v1.4.1.apk",
+  "checksum": "8d1a848e709b7cf79cdb21eca855ecf7",
   "mandatory": true,
   "graceDays": 3,
-  "releaseNotes": "Menambahkan fitur pencarian produk dan peringatan stok sedikit"
+  "releaseNotes": "Memperbaiki perilaku scroll item dalam keranjang"
 }
