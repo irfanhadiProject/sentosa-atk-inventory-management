@@ -9,7 +9,7 @@ import SearchProduct from '../components/SearchProduct';
 import { generateSKU, getLowStockProducts, getProductByBarcode, getZakatReport, saveProduct, syncInitialAssetValue } from '../firebase/firebaseConfig';
 import { sharedStyles } from '../styles/sharedStyles';
 
-const GOLD_PRICES_PER_GRAM = 3135000;
+const GOLD_PRICES_PER_GRAM = 2803000;
 const ANNUAL_NISAB = 85 * GOLD_PRICES_PER_GRAM;
 
 export default function InventoryScreen() {
