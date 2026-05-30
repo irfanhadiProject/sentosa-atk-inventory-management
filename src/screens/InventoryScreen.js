@@ -27,6 +27,7 @@ export default function InventoryScreen() {
   
   const isReachedNisab = globalAsset >= ANNUAL_NISAB;
   
+  // Form default state
   const [form, setForm] = useState({
     barcode: '', 
     name: '', 
@@ -38,8 +39,10 @@ export default function InventoryScreen() {
     price_wholesale: '',
     wholesale_qty: '',
     stock: '', 
+    minStock: '',
   });
 
+  // Fetch zakat report
   useEffect(() => {
     const fetchInitialReport = async () => {
       const report = await getZakatReport();
@@ -55,6 +58,7 @@ export default function InventoryScreen() {
     };
   }, [isFocused]);
 
+  // SKU rendering 
   useEffect(() => {
     let isMounted = true;
 
@@ -78,11 +82,13 @@ export default function InventoryScreen() {
     return () => { isMounted = false; };
   }, [form.category, form.brand, form.sku, form.barcode]);
 
+  // Show Toast message
   const showToast = (message) => {
     setSnackMsg(message);
     setSnackbarVisible(true);
   }
 
+  // Hide Form from UI
   const hideForm = () => {
     setIsFormVisible(false);
     setIsScanning(false);
@@ -97,9 +103,11 @@ export default function InventoryScreen() {
       price_wholesale: '',
       wholesale_qty: '',
       stock: '', 
+      minStock: ''
     });
   }
 
+  // Fetching product from Firestore
   const fetchProduct = async (code) => {
     if (!code) return;
 
@@ -118,6 +126,7 @@ export default function InventoryScreen() {
           price_wholesale: data.price_wholesale?.toString() || '',
           wholesale_qty: data.wholesale_qty?.toString() || '',
           stock: data.stock?.toString() || '',
+          minStock: data.minStock?.toString() || '',
         });
       } else {
         setForm({ 
@@ -130,7 +139,8 @@ export default function InventoryScreen() {
           price_sell: '',
           price_wholesale: '',
           wholesale_qty: '',
-          stock: ''
+          stock: '',
+          minStock: '',
         });
         showToast("Barang Baru, Silakan lengkapi data.");
       }
@@ -143,20 +153,31 @@ export default function InventoryScreen() {
     }
   };
 
+  // Fetch low stock product
   const fetchLowStock = async () => {
     try {
-      const items = await getLowStockProducts(); // kamu buat ini
+      const items = await getLowStockProducts();
       setLowStockItems(items);
     } catch (e) {
       console.error(e);
     }
   };
 
+  // Safe product data to Firebase/Firestore
   const handleSaveProduct = async () => {
     const finalBarcode = form.barcode.trim() || form.sku;
 
     if (!finalBarcode || !form.name) return Alert.alert("Error", "Barcode/SKU dan Nama wajib diisi!");
     
+    let parsedMinStock = null;
+    if (form.minStock && form.minStock.trim() !== '') {
+      const num = parseInt(form.minStock, 10);
+      if (isNaN(num) || num < 0) {
+        return Alert.alert("Error", "Batas minimum stock tidak boleh bernilai negatif!");
+      }
+      parsedMinStock = num;
+    }
+
     setLoading(true);
     try {
       const productData = {
@@ -169,6 +190,7 @@ export default function InventoryScreen() {
         price_wholesale: parseInt(form.price_wholesale) || 0,
         wholesale_qty: parseInt(form.wholesale_qty) || 0,
         stock: parseInt(form.stock) || 0,
+        ...(parsedMinStock !== null && { minStock: parsedMinStock }),
       };
 
       await saveProduct(finalBarcode, productData);
@@ -399,16 +421,30 @@ export default function InventoryScreen() {
                 />
               </View>
   
-              <TextInput 
-                label="Stok" 
-                value={form.stock} 
-                onChangeText={t => handleInputChange('stock', t)} 
-                mode="outlined" 
-                keyboardType="numeric" 
-                style={styles.input} 
-                textColor={Colors.light.text}
-                theme={inputTheme}
-              />
+              <View style={styles.row}>
+                <TextInput 
+                  label="Stok" 
+                  value={form.stock} 
+                  onChangeText={t => handleInputChange('stock', t)} 
+                  mode="outlined" 
+                  keyboardType="numeric" 
+                  style={[styles.input, { width: '48%' }]} 
+                  textColor={Colors.light.text}
+                  theme={inputTheme}
+                />
+  
+                <TextInput 
+                  label="Minimum Stok" 
+                  value={form.minStock} 
+                  onChangeText={t => handleInputChange('minStock', t)} 
+                  mode="outlined" 
+                  keyboardType="numeric" 
+                  style={[styles.input, { width: '48%' }]} 
+                  textColor={Colors.light.text}
+                  placeholder="Default: 5"
+                  theme={inputTheme}
+                />
+              </View>
               
               <Divider style={{ marginVertical: 10 }} />
               <Text 
@@ -604,8 +640,6 @@ export default function InventoryScreen() {
                   nestedScrollEnabled={true}
                 >
                   {lowStockItems.map(item => {
-                    const isCritical = item.stock <= 2;
-
                     return (
                       <List.Item
                         key={item.id}
@@ -616,19 +650,13 @@ export default function InventoryScreen() {
                         }}
                         description={`Sisa: ${item.stock} pcs`}
                         descriptionStyle={{ 
-                          color: isCritical 
-                            ? Colors.light.danger 
-                            : Colors.light.warning,
+                          color: Colors.light.danger,
                           fontWeight: 'bold'
                         }}
                         left={() => (
                           <List.Icon 
                             icon="alert-circle"
-                            color={
-                              isCritical 
-                                ? Colors.light.danger 
-                                : Colors.light.warning
-                            }
+                            color={ Colors.light.danger }
                           />
                         )}
                         style={{
@@ -638,9 +666,7 @@ export default function InventoryScreen() {
                           marginBottom: 6,
                           elevation: 1,
                           borderWidth: 1,
-                          borderColor: isCritical
-                          ? Colors.light.danger
-                          : Colors.light.warning
+                          borderColor: Colors.light.danger
                         }}
                       />
                     );

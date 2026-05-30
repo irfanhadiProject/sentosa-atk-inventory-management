@@ -1,4 +1,5 @@
 import firestore from '@react-native-firebase/firestore';
+import { isStockLow } from '../utils/inventoryHelper';
 
 const getDb = () => {
   return firestore();
@@ -206,20 +207,23 @@ export const searchProductsByName = async (keyword) => {
 }
 
 // Get product when stock <= 5
-export const getLowStockProducts = async (treshold = 5) => {
+export const getLowStockProducts = async () => {
   try {
     const db = getDb();
 
     const snapshot = await db
       .collection('products')
-      .where('stock', '<=', treshold)
       .orderBy('stock', 'asc')
       .get();
 
-    return snapshot.docs.map(doc => ({
+    const allProducts = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    }));
+    }))
+
+    const lowStockItems = allProducts.filter(product => isStockLow(product))
+
+    return lowStockItems
   } catch (error) {
     console.error("Error getLowStockProducts:", error);
     return [];
