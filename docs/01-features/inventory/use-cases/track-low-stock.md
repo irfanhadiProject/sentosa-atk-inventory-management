@@ -14,9 +14,11 @@
 
 2. The UI code maps over the streaming product collection arrays.
 
-3. For each product entity, the engine evaluates the current stock value against the business safety threshold limit (**BR-01**):
+3. For each product entity, the engine evaluates the current stock value using its individual threshold limit according to (**BR-01**):
 
-   - If `product.stock <= safety_threshold`: The UI marks the product status card with a prominent "Low Stock" warning badge.
+   - The engine determines the threshold value: if `product.minstock` exists, it uses that value; otherwise, it dynamically falls back to the default value of `5`.
+
+   - If `product.stock <= resolved_threshold`: The UI marks the product status card with a prominent "Low Stock" warning badge.
 
 4. The Operator views the warning states, giving them immediate feedback on items that need restocking.
 

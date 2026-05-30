@@ -22,6 +22,7 @@
 | `wholesale_qty` | `number` | The minimum volume threshold required to trigger the `price_wholesale` rate. |
 | `stock` | `number` | The live running inventory stock quantity count currently present in the store. |
 | `updated_at` | `timestamp` | Server-assigned timestamp marking the exact moment of the last mutation event. |
+| `min_stock` | `number` | Individual safe guardrail threshold parameter |
 
 ### 1.2 JSON Representation Example
 

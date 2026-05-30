@@ -1,10 +1,14 @@
 # Inventory Module - Business Rules
 
-## BR-01: Low Stock Threshold Constant
+## BR-01: Dynamic Low Stock Guardrails
 
-- **Statement:** A product profile is flagged as an endangered inventory item when its physical stock count drops to or below a critical boundary limit.
+- **Statement:** A product profile is flagged as an endangered inventory item when its physical stock count drops to or below an individually assigned safety threshold.
 
-- **Enforcement:** The system evaluates this condition as a client-side layout modifier during rendering. If a product's stock matches this condition, a low stock state is triggered visually across inventory tracking logs.
+- **Enforcement:** The system evaluates this condition during rendering. If a product's current stock matches the condition:
+
+  $$\text{stock} \le \text{minStock}$$
+
+  a low stock state is triggered visually across inventory tracking logs. If an item lacks an explicitly declared `minStock` property (returning `null` or `undefined`), the client runtime system dynamically falls back to a global default limit of **5**.
 
 - **Cross-Reference:** Directly consumed by [use-cases/track-low-stock.md](use-cases/track-low-stock.md).
 
