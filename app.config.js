@@ -63,6 +63,8 @@ export default () => {
         }
       ],
       "expo-sqlite",
+      "expo-font",
+      "expo-web-browser",
       "@react-native-firebase/app"
     ],
 
