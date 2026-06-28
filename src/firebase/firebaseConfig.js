@@ -1,8 +1,10 @@
 import firestore from '@react-native-firebase/firestore';
 
-const getDb = () => {
+export const getDb = () => {
   return firestore();
 };
+
+export { firestore };
 
 // Synchronize assets value
 export const syncInitialAssetValue = async () => {
@@ -118,25 +120,6 @@ export const saveProduct = async (barcode, newData) => {
     console.error("Save Product Error:", error);
     throw error;
   }
-};
-
-// Update stock function (decrease the number of stock)
-export const updateProductStock = async (barcode, qty) => {
-  const db = getDb();
-  const docRef = db.collection('products').doc(barcode.trim());
-  const statsRef = db.collection('metadata').doc('inventory_stats');
-  
-  await db.runTransaction(async (transaction) => {
-    const productSnap = await transaction.get(docRef);
-    if (!productSnap.exists()) return;
-
-    const product = productSnap.data();
-    const price = product.price_sell || 0;
-    const valueReduction = price * qty;
-
-    transaction.update(docRef, { stock: firestore.FieldValue.increment(-qty) });
-    transaction.update(statsRef, { total_asset_value: firestore.FieldValue.increment(-valueReduction)});
-  })
 };
 
 // Restock Product
