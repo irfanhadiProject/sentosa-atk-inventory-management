@@ -27,7 +27,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
 import SearchProduct from '../components/SearchProduct';
 import { useCart } from '../context/CartContext';
-import { getProductByBarcode, updateProductStock } from '../firebase/firebaseConfig';
+import { getProductByBarcode } from '../firebase/firebaseConfig';
+import { processCheckout } from '../services/transactionService';
 import { sharedStyles } from '../styles/sharedStyles';
 
 export default function CashierScreen() {
@@ -199,9 +200,8 @@ export default function CashierScreen() {
     setLoading(true);
     
     try {
-      await Promise.all(
-        cart.map(item => updateProductStock(item.barcode, item.qty))
-      );
+      await processCheckout(cart);
+      
       showToast("Transaksi Berhasil!");
       clearCart();
     } catch (e) {
