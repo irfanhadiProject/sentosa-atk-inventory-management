@@ -7,14 +7,14 @@ export default () => {
   return {
     name: isDev ? "Sentosa ATK (Dev)" : "Sentosa ATK",
     slug: "sistem-inventaris-sentosa-atk",
-    version: "1.4.1",
+    version: "1.4.2",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "sisteminventarissentosaatk",
     userInterfaceStyle: "automatic",
 
     ios: {
-      buildNumber: "14",
+      buildNumber: "15",
       supportsTablet: true
     },
 
@@ -22,7 +22,7 @@ export default () => {
       package: isDev
         ? "com.anonymous.sisteminventarissentosaatk.dev"
         : "com.anonymous.sisteminventarissentosaatk",
-      versionCode: 14,
+      versionCode: 15,
       permissions: ["REQUEST_INSTALL_PACKAGES"],
       predictiveBackGestureEnabled: false,
       adaptiveIcon: {
