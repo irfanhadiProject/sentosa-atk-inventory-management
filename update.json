@@ -1,9 +1,9 @@
 {
-  "version": "1.4.1",
-  "versionCode": 14,
-  "apkUrl": "https://github.com/irfanhadiProject/sentosa-atk-inventory-management/releases/download/v1.4.1/sentosa-v1.4.1.apk",
-  "checksum": "8d1a848e709b7cf79cdb21eca855ecf7",
+  "version": "1.4.2",
+  "versionCode": 15,
+  "apkUrl": "https://github.com/irfanhadiProject/sentosa-atk-inventory-management/releases/download/v1.4.2/sentosa-v1.4.2.apk",
+  "checksum": "43838f0f82cd2193d84f856d39896dd5",
   "mandatory": true,
   "graceDays": 3,
-  "releaseNotes": "Memperbaiki perilaku scroll item dalam keranjang"
+  "releaseNotes": "Memperbaiki perilaku sukses checkout item sebagian"
 }
